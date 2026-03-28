@@ -12,15 +12,27 @@ import org.koin.dsl.module
 val dataModule = module {
     single {
         Room.databaseBuilder(
-            androidContext(),
-            MonitoreoDatabase::class.java,
-            "monitoreo_ambiental_db"
-        ).build()
+                        androidContext(),
+                        MonitoreoDatabase::class.java,
+                        "monitoreo_ambiental_db"
+                )
+                .build()
     }
 
     single { get<MonitoreoDatabase>().usuarioDao }
     single { get<MonitoreoDatabase>().incidenciaDao }
 
-    single<UsuarioRepository> { UsuarioRepositoryImpl(get()) }
-    single<IncidenciaRepository> { IncidenciaRepositoryImpl(get()) }
+    single<cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository> {
+        cu.uci.cisol.monitoreoambiental.data.local.DataStoreSessionManager(androidContext())
+    }
+
+    single<cu.uci.cisol.monitoreoambiental.domain.repository.UsuarioRepository> {
+        UsuarioRepositoryImpl(get())
+    }
+    single<cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository> {
+        IncidenciaRepositoryImpl(get())
+    }
+    single<cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository> {
+        cu.uci.cisol.monitoreoambiental.data.repository.AuthRepositoryImpl(get())
+    }
 }

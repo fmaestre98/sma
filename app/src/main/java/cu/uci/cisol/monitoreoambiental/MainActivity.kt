@@ -9,9 +9,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import cu.uci.cisol.monitoreoambiental.ui.auth.AuthViewModel
+import cu.uci.cisol.monitoreoambiental.ui.auth.LoginScreen
+import cu.uci.cisol.monitoreoambiental.ui.auth.RegisterScreen
 import cu.uci.cisol.monitoreoambiental.ui.theme.MonitoreoAmbientalTheme
+import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -19,11 +28,42 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             MonitoreoAmbientalTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                val navController = rememberNavController()
+                val authViewModel: AuthViewModel = koinViewModel()
+                val isSessionActive by authViewModel.isSessionActive.collectAsState(initial = false)
+
+                val startDestination = if (isSessionActive) "home" else "login"
+
+                NavHost(navController = navController, startDestination = startDestination) {
+                    composable("login") {
+                        LoginScreen(
+                                viewModel = authViewModel,
+                                onNavigateToRegister = { navController.navigate("register") },
+                                onNavigateToHome = {
+                                    navController.navigate("home") {
+                                        popUpTo("login") { inclusive = true }
+                                    }
+                                }
+                        )
+                    }
+                    composable("register") {
+                        RegisterScreen(
+                                viewModel = authViewModel,
+                                onNavigateToLogin = {
+                                    navController.navigate("login") {
+                                        popUpTo("register") { inclusive = true }
+                                    }
+                                }
+                        )
+                    }
+                    composable("home") {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            Greeting(
+                                    name = "Android User",
+                                    modifier = Modifier.padding(innerPadding)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -32,16 +72,11 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
+    Text(text = "Hello $name! Here goes the Home screen.", modifier = modifier)
 }
 
 @Preview(showBackground = true)
 @Composable
 fun GreetingPreview() {
-    MonitoreoAmbientalTheme {
-        Greeting("Android")
-    }
+    MonitoreoAmbientalTheme { Greeting("Android") }
 }

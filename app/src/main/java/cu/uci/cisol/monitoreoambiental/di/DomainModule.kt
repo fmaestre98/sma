@@ -13,9 +13,14 @@ val domainModule = module {
     factory { GuardarIncidenciaUseCase(get()) }
     factory { ObtenerIncidenciasPendientesUseCase(get()) }
     factory { ObtenerIncidenciasUseCase(get()) }
-    factory { SincronizarIncidenciasUseCase(get()) } 
-    
+    factory { SincronizarIncidenciasUseCase(get()) }
+
     factory { GuardarUsuarioUseCase(get()) }
     factory { ObtenerUsuarioUseCase(get()) }
     factory { EliminarUsuarioUseCase(get()) }
+
+    factory { cu.uci.cisol.monitoreoambiental.domain.usecase.LoginUseCase(get(), get()) }
+    factory { cu.uci.cisol.monitoreoambiental.domain.usecase.RegisterUseCase(get()) }
+    factory { cu.uci.cisol.monitoreoambiental.domain.usecase.CheckSessionUseCase(get()) }
+    factory { cu.uci.cisol.monitoreoambiental.domain.usecase.LogoutUseCase(get()) }
 }
