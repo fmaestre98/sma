@@ -1,0 +1,39 @@
+Initialized native services in: /Users/fmaestre/.gradle/native
+Initialized jansi services in: /Users/fmaestre/.gradle/native
+Found daemon DaemonInfo{pid=88092, address=[7c006ff6-017c-4e48-9986-1ceca21ceb5c port:56559, addresses:[/127.0.0.1]], state=Idle, lastBusy=1774651376941, context=DefaultDaemonContext[uid=f2b6c44a-53ab-4902-8e98-e48cd764c129,javaHome=/Users/fmaestre/Applications/Android Studio.app/Contents/jbr/Contents/Home,javaVersion=21,javaVendor=JetBrains s.r.o.,daemonRegistryDir=/Users/fmaestre/.gradle/daemon,pid=88092,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx2048m,-Dfile.encoding=UTF-8,-Duser.country=CU,-Duser.language=es,-Duser.variant]} however its context does not match the desired criteria.
+JVM is incompatible.
+Wanted: DaemonRequestContext{jvmCriteria=/opt/homebrew/Cellar/openjdk@17/17.0.17/libexec/openjdk.jdk/Contents/Home (no JDK specified, using current Java home), daemonOpts=[-Xmx2048m, -Dfile.encoding=UTF-8, -Duser.country=CU, -Duser.language=es, -Duser.variant], applyInstrumentationAgent=true, nativeServicesMode=ENABLED, priority=NORMAL}
+Actual: DefaultDaemonContext[uid=f2b6c44a-53ab-4902-8e98-e48cd764c129,javaHome=/Users/fmaestre/Applications/Android Studio.app/Contents/jbr/Contents/Home,javaVersion=21,javaVendor=JetBrains s.r.o.,daemonRegistryDir=/Users/fmaestre/.gradle/daemon,pid=88092,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx2048m,-Dfile.encoding=UTF-8,-Duser.country=CU,-Duser.language=es,-Duser.variant]
+
+  Looking for a different daemon...
+The client will now receive all logging from the daemon (pid: 99248). The daemon log file: /Users/fmaestre/.gradle/daemon/9.1.0/daemon-99248.out.log
+Starting 5th build in daemon [uptime: 5 mins 14.612 secs, performance: 98%, GC rate: 0.00/s, heap usage: 0% of 2 GiB]
+Using 10 worker leases.
+Now considering [/Users/fmaestre/StudioProjects/MonitoreoAmbiental] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file '/Users/fmaestre/StudioProjects/MonitoreoAmbiental/settings.gradle.kts'.
+Projects loaded. Root project using build file '/Users/fmaestre/StudioProjects/MonitoreoAmbiental/build.gradle.kts'.
+Included projects: [root project 'Monitoreo Ambiental', project ':app']
+
+> Configure project :
+Evaluating root project 'Monitoreo Ambiental' using build file '/Users/fmaestre/StudioProjects/MonitoreoAmbiental/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '9.0.1', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '2.0.21', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.compose', version: '2.0.21', apply: false]
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization', version: '2.0.21', apply: false]
+Resolved plugin [id: 'com.google.devtools.ksp', version: '2.0.21-1.0.27', apply: false]
+
+> Configure project :app
+Evaluating project ':app' using build file '/Users/fmaestre/StudioProjects/MonitoreoAmbiental/app/build.gradle.kts'.
+Resolved plugin [id: 'com.android.application', version: '9.0.1']
+Resolved plugin [id: 'org.jetbrains.kotlin.android', version: '2.0.21']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.compose', version: '2.0.21']
+Resolved plugin [id: 'org.jetbrains.kotlin.plugin.serialization', version: '2.0.21']
+Resolved plugin [id: 'com.google.devtools.ksp', version: '2.0.21-1.0.27']
+Build 34b8e319-6abd-4c45-be13-5e55bb333d71 is started
+Using default execution profile
+Using Kotlin Gradle Plugin gradle813 variant
+Build 34b8e319-6abd-4c45-be13-5e55bb333d71 is closed
+Watched directory hierarchies: []

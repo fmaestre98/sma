@@ -1,0 +1,26 @@
+package cu.uci.cisol.monitoreoambiental.di
+
+import androidx.room.Room
+import cu.uci.cisol.monitoreoambiental.data.local.db.MonitoreoDatabase
+import cu.uci.cisol.monitoreoambiental.data.repository.IncidenciaRepositoryImpl
+import cu.uci.cisol.monitoreoambiental.data.repository.UsuarioRepositoryImpl
+import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
+import cu.uci.cisol.monitoreoambiental.domain.repository.UsuarioRepository
+import org.koin.android.ext.koin.androidContext
+import org.koin.dsl.module
+
+val dataModule = module {
+    single {
+        Room.databaseBuilder(
+            androidContext(),
+            MonitoreoDatabase::class.java,
+            "monitoreo_ambiental_db"
+        ).build()
+    }
+
+    single { get<MonitoreoDatabase>().usuarioDao }
+    single { get<MonitoreoDatabase>().incidenciaDao }
+
+    single<UsuarioRepository> { UsuarioRepositoryImpl(get()) }
+    single<IncidenciaRepository> { IncidenciaRepositoryImpl(get()) }
+}
