@@ -33,6 +33,10 @@ val dataModule = module {
         IncidenciaRepositoryImpl(get())
     }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository> {
-        cu.uci.cisol.monitoreoambiental.data.repository.AuthRepositoryImpl(get())
+        if (cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_AUTH) {
+            cu.uci.cisol.monitoreoambiental.data.repository.MockAuthRepositoryImpl()
+        } else {
+            cu.uci.cisol.monitoreoambiental.data.repository.AuthRepositoryImpl(get())
+        }
     }
 }

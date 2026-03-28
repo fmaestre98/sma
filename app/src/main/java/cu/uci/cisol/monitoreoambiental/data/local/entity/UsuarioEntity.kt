@@ -9,7 +9,5 @@ data class UsuarioEntity(
     val nombre: String,
     val apellidos: String,
     val ci: String,
-    val provincia: String,
-    val municipio: String,
     val telefono: String
 )

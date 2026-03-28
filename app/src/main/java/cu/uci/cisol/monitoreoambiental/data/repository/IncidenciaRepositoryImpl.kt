@@ -55,8 +55,6 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     id = id,
                     tematica = tematica.name,
                     tipo = tipo.name,
-                    provincia = provincia,
-                    municipio = municipio,
                     localidad = localidad,
                     descripcion = descripcion,
                     imagenPath = imagenPath,
@@ -64,7 +62,6 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     longitud = longitud,
                     fechaHora = fechaHora,
                     estado = estado.name,
-                    incidenciaResueltaId = incidenciaResueltaId
             )
 
     private fun IncidenciaEntity.toDomain() =
@@ -72,8 +69,6 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     id = id,
                     tematica = enumValueOf<Tematica>(tematica),
                     tipo = enumValueOf<TipoIncidencia>(tipo),
-                    provincia = provincia,
-                    municipio = municipio,
                     localidad = localidad,
                     descripcion = descripcion,
                     imagenPath = imagenPath,
@@ -81,6 +76,5 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     longitud = longitud,
                     fechaHora = fechaHora,
                     estado = enumValueOf<EstadoIncidencia>(estado),
-                    incidenciaResueltaId = incidenciaResueltaId
             )
 }

@@ -17,8 +17,6 @@ class UsuarioRepositoryImpl(private val usuarioDao: UsuarioDao) : UsuarioReposit
                             nombre = usuario.nombre,
                             apellidos = usuario.apellidos,
                             ci = usuario.ci,
-                            provincia = usuario.provincia,
-                            municipio = usuario.municipio,
                             telefono = usuario.telefono
                     )
             usuarioDao.guardar(entity)
@@ -33,8 +31,6 @@ class UsuarioRepositoryImpl(private val usuarioDao: UsuarioDao) : UsuarioReposit
                         nombre = entity.nombre,
                         apellidos = entity.apellidos,
                         ci = entity.ci,
-                        provincia = entity.provincia,
-                        municipio = entity.municipio,
                         telefono = entity.telefono
                 )
             }

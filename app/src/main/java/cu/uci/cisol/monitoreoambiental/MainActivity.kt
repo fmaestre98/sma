@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -24,44 +25,49 @@ import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             MonitoreoAmbientalTheme {
                 val navController = rememberNavController()
                 val authViewModel: AuthViewModel = koinViewModel()
-                val isSessionActive by authViewModel.isSessionActive.collectAsState(initial = false)
+                val isSessionActive by authViewModel.isSessionActive.collectAsState(initial = null)
 
-                val startDestination = if (isSessionActive) "home" else "login"
+                splashScreen.setKeepOnScreenCondition { isSessionActive == null }
 
-                NavHost(navController = navController, startDestination = startDestination) {
-                    composable("login") {
-                        LoginScreen(
-                                viewModel = authViewModel,
-                                onNavigateToRegister = { navController.navigate("register") },
-                                onNavigateToHome = {
-                                    navController.navigate("home") {
-                                        popUpTo("login") { inclusive = true }
+                if (isSessionActive != null) {
+                    val startDestination = if (isSessionActive == true) "home" else "login"
+
+                    NavHost(navController = navController, startDestination = startDestination) {
+                        composable("login") {
+                            LoginScreen(
+                                    viewModel = authViewModel,
+                                    onNavigateToRegister = { navController.navigate("register") },
+                                    onNavigateToHome = {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
                                     }
-                                }
-                        )
-                    }
-                    composable("register") {
-                        RegisterScreen(
-                                viewModel = authViewModel,
-                                onNavigateToLogin = {
-                                    navController.navigate("login") {
-                                        popUpTo("register") { inclusive = true }
-                                    }
-                                }
-                        )
-                    }
-                    composable("home") {
-                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                            Greeting(
-                                    name = "Android User",
-                                    modifier = Modifier.padding(innerPadding)
                             )
+                        }
+                        composable("register") {
+                            RegisterScreen(
+                                    viewModel = authViewModel,
+                                    onNavigateToLogin = {
+                                        navController.navigate("login") {
+                                            popUpTo("register") { inclusive = true }
+                                        }
+                                    }
+                            )
+                        }
+                        composable("home") {
+                            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                                Greeting(
+                                        name = "Android User",
+                                        modifier = Modifier.padding(innerPadding)
+                                )
+                            }
                         }
                     }
                 }

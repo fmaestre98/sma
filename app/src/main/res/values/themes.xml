@@ -2,4 +2,17 @@
 <resources>
 
     <style name="Theme.MonitoreoAmbiental" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.MonitoreoAmbiental.Splash" parent="Theme.SplashScreen">
+        <!-- Background color -->
+        <item name="windowSplashScreenBackground">#FFFFFF</item>
+        <!-- Your app logo -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
+        <!-- Animation duration -->
+        <item name="windowSplashScreenAnimationDuration">500</item>
+        
+       <item name="postSplashScreenTheme">@style/Theme.MonitoreoAmbiental</item>
+      </style>
+
+
 </resources>
