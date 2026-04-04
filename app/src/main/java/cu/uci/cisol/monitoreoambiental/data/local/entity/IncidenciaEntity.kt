@@ -7,8 +7,6 @@ import androidx.room.PrimaryKey
 data class IncidenciaEntity(
     @PrimaryKey val id: String,
     val tematica: String,
-    val tipo: String,
-    val localidad: String,
     val descripcion: String,
     val imagenPath: String?,
     val latitud: Double?,

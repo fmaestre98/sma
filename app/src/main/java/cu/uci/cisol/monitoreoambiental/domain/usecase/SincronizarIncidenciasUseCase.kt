@@ -13,7 +13,7 @@ class SincronizarIncidenciasUseCase(private val repository: IncidenciaRepository
                     enviadas++
                 }
                 .onFailure {
-                    repository.marcarComoError(incidencia.id)
+                    
                 }
         }
         enviadas

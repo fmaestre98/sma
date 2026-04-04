@@ -5,7 +5,6 @@ import cu.uci.cisol.monitoreoambiental.data.local.entity.IncidenciaEntity
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
-import cu.uci.cisol.monitoreoambiental.domain.model.TipoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -30,15 +29,10 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
 
     override suspend fun marcarComoEnviada(id: String): Result<Unit> = runCatching {
         withContext(Dispatchers.IO) {
-            incidenciaDao.actualizarEstado(id, EstadoIncidencia.ENVIADA.name)
+            incidenciaDao.actualizarEstado(id, EstadoIncidencia.NUEVA.name)
         }
     }
 
-    override suspend fun marcarComoError(id: String): Result<Unit> = runCatching {
-        withContext(Dispatchers.IO) {
-            incidenciaDao.actualizarEstado(id, EstadoIncidencia.ERROR.name)
-        }
-    }
 
     override suspend fun enviarAlServidor(incidencia: Incidencia): Result<Unit> =
             runCatching {
@@ -54,8 +48,6 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
             IncidenciaEntity(
                     id = id,
                     tematica = tematica.name,
-                    tipo = tipo.name,
-                    localidad = localidad,
                     descripcion = descripcion,
                     imagenPath = imagenPath,
                     latitud = latitud,
@@ -68,8 +60,6 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
             Incidencia(
                     id = id,
                     tematica = enumValueOf<Tematica>(tematica),
-                    tipo = enumValueOf<TipoIncidencia>(tipo),
-                    localidad = localidad,
                     descripcion = descripcion,
                     imagenPath = imagenPath,
                     latitud = latitud,

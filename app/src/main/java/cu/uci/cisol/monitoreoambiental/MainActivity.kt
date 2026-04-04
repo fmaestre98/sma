@@ -4,15 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,6 +14,8 @@ import androidx.navigation.compose.rememberNavController
 import cu.uci.cisol.monitoreoambiental.ui.auth.AuthViewModel
 import cu.uci.cisol.monitoreoambiental.ui.auth.LoginScreen
 import cu.uci.cisol.monitoreoambiental.ui.auth.RegisterScreen
+import cu.uci.cisol.monitoreoambiental.ui.home.HomeScreen
+import cu.uci.cisol.monitoreoambiental.ui.home.HomeViewModel
 import cu.uci.cisol.monitoreoambiental.ui.theme.MonitoreoAmbientalTheme
 import org.koin.androidx.compose.koinViewModel
 
@@ -42,47 +38,54 @@ class MainActivity : ComponentActivity() {
                     NavHost(navController = navController, startDestination = startDestination) {
                         composable("login") {
                             LoginScreen(
-                                    viewModel = authViewModel,
-                                    onNavigateToRegister = { navController.navigate("register") },
-                                    onNavigateToHome = {
-                                        navController.navigate("home") {
-                                            popUpTo("login") { inclusive = true }
-                                        }
+                                viewModel = authViewModel,
+                                onNavigateToRegister = { navController.navigate("register") },
+                                onNavigateToHome = {
+                                    navController.navigate("home") {
+                                        popUpTo("login") { inclusive = true }
                                     }
+                                }
                             )
                         }
                         composable("register") {
                             RegisterScreen(
-                                    viewModel = authViewModel,
-                                    onNavigateToLogin = {
-                                        navController.navigate("login") {
-                                            popUpTo("register") { inclusive = true }
-                                        }
+                                viewModel = authViewModel,
+                                onNavigateToLogin = {
+                                    navController.navigate("login") {
+                                        popUpTo("register") { inclusive = true }
                                     }
+                                }
                             )
                         }
                         composable("home") {
-                            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                                Greeting(
-                                        name = "Android User",
-                                        modifier = Modifier.padding(innerPadding)
-                                )
+                            val homeViewModel: HomeViewModel = koinViewModel()
+                            val homeUiState by homeViewModel.uiState.collectAsState()
+
+                            // Observa cuando el logout se completó para navegar al login
+                            LaunchedEffect(homeUiState.logoutCompleted) {
+                                if (homeUiState.logoutCompleted) {
+                                    navController.navigate("login") {
+                                        popUpTo("home") { inclusive = true }
+                                    }
+                                }
                             }
+
+                            HomeScreen(
+                                viewModel = homeViewModel,
+                                onNuevaIncidencia = {
+                                    // TODO: navController.navigate("nueva_incidencia")
+                                },
+                                onMisIncidencias = {
+                                    // TODO: navController.navigate("mis_incidencias")
+                                },
+                                onLogout = {
+                                    homeViewModel.logout()
+                                }
+                            )
                         }
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(text = "Hello $name! Here goes the Home screen.", modifier = modifier)
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    MonitoreoAmbientalTheme { Greeting("Android") }
 }

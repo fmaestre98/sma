@@ -9,7 +9,6 @@ interface IncidenciaRepository {
     fun observarTodas(): Flow<List<Incidencia>>
     suspend fun obtenerPendientes(): List<Incidencia>
     suspend fun marcarComoEnviada(id: String): Result<Unit>
-    suspend fun marcarComoError(id: String): Result<Unit>
     suspend fun enviarAlServidor(incidencia: Incidencia): Result<Unit>
     suspend fun obtenerPorId(id: String): Incidencia?
 }

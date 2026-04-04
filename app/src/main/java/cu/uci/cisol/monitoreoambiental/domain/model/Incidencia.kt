@@ -3,8 +3,6 @@ package cu.uci.cisol.monitoreoambiental.domain.model
 data class Incidencia(
     val id: String,
     val tematica: Tematica,
-    val tipo: TipoIncidencia,
-    val localidad: String,
     val descripcion: String,
     val imagenPath: String?,
     val latitud: Double?,
