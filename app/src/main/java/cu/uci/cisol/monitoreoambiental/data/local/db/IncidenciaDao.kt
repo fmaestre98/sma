@@ -11,15 +11,28 @@ interface IncidenciaDao {
     fun observarTodas(): Flow<List<IncidenciaEntity>>
 
     @Query("SELECT * FROM incidencias WHERE estado = 'PENDIENTE' ORDER BY fechaHora ASC")
-    fun obtenerPendientes(): List<IncidenciaEntity>
+    suspend fun obtenerPendientes(): List<IncidenciaEntity>
 
     @Query("SELECT * FROM incidencias WHERE id = :id")
-    fun obtenerPorId(id: String): IncidenciaEntity?
+    suspend fun obtenerPorId(id: String): IncidenciaEntity?
 
-    @Upsert fun insertar(incidencia: IncidenciaEntity)
+    @Upsert
+    suspend fun insertar(incidencia: IncidenciaEntity)
 
-    @Query("UPDATE incidencias SET estado = :estado WHERE id = :id")
-    fun actualizarEstado(id: String, estado: String)
+    @Query(
+        """UPDATE incidencias
+           SET estado = :estado,
+               imagenResolucionPath = COALESCE(:imagenResolucionPath, imagenResolucionPath),
+               sincronizado = :sincronizado
+           WHERE id = :id"""
+    )
+    suspend fun actualizarEstado(
+        id: String,
+        estado: String,
+        imagenResolucionPath: String?,
+        sincronizado: Boolean,
+    )
 
-    @Query("DELETE FROM incidencias WHERE id = :id") fun eliminar(id: String)
+    @Query("DELETE FROM incidencias WHERE id = :id")
+    suspend fun eliminar(id: String)
 }

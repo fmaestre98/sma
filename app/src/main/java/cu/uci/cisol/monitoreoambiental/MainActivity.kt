@@ -73,13 +73,43 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(
                                 viewModel = homeViewModel,
                                 onNuevaIncidencia = {
-                                    // TODO: navController.navigate("nueva_incidencia")
+                                    navController.navigate("nueva_incidencia")
                                 },
                                 onMisIncidencias = {
-                                    // TODO: navController.navigate("mis_incidencias")
+                                    navController.navigate("mis_incidencias")
+                                },
+                                onVerBorradores = {
+                                    navController.navigate("mis_incidencias?filtro=${cu.uci.cisol.monitoreoambiental.ui.incidencia.IncidenciaFiltro.BORRADORES.name}")
                                 },
                                 onLogout = {
                                     homeViewModel.logout()
+                                }
+                            )
+                        }
+                        
+                        composable(
+                            route = "nueva_incidencia?incidenciaId={incidenciaId}",
+                            arguments = listOf(androidx.navigation.navArgument("incidenciaId") { 
+                                nullable = true
+                                defaultValue = null
+                            })
+                        ) {
+                            cu.uci.cisol.monitoreoambiental.ui.incidencia.NuevaIncidenciaRoot(
+                                onNavigateBack = { navController.navigateUp() }
+                            )
+                        }
+
+                        composable(
+                            route = "mis_incidencias?filtro={filtro}",
+                            arguments = listOf(androidx.navigation.navArgument("filtro") { 
+                                nullable = true
+                                defaultValue = null
+                            })
+                        ) {
+                            cu.uci.cisol.monitoreoambiental.ui.incidencia.MisIncidenciasRoot(
+                                onNavigateBack = { navController.navigateUp() },
+                                onNavigateToDetail = { id ->
+                                    navController.navigate("nueva_incidencia?incidenciaId=$id")
                                 }
                             )
                         }

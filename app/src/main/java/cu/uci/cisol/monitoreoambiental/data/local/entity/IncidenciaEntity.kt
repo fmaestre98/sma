@@ -9,8 +9,12 @@ data class IncidenciaEntity(
     val tematica: String,
     val descripcion: String,
     val imagenPath: String?,
+    /** Foto de resolución, se rellena al marcar como RESUELTA. */
+    val imagenResolucionPath: String?,
     val latitud: Double?,
     val longitud: Double?,
     val fechaHora: Long,
     val estado: String,
+    /** true si ya fue sincronizada con el servidor. */
+    val sincronizado: Boolean = false,
 )

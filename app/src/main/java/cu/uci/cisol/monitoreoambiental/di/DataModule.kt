@@ -16,6 +16,7 @@ val dataModule = module {
                         MonitoreoDatabase::class.java,
                         "monitoreo_ambiental_db"
                 )
+                .fallbackToDestructiveMigration()
                 .build()
     }
 
@@ -30,7 +31,11 @@ val dataModule = module {
         UsuarioRepositoryImpl(get())
     }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository> {
-        IncidenciaRepositoryImpl(get())
+        if (cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {
+            cu.uci.cisol.monitoreoambiental.data.repository.MockIncidenciaRepositoryImpl()
+        } else {
+            IncidenciaRepositoryImpl(get())
+        }
     }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository> {
         if (cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_AUTH) {

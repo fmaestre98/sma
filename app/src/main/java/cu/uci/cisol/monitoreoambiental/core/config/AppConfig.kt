@@ -7,4 +7,9 @@ object AppConfig {
      * [cu.uci.cisol.monitoreoambiental.data.repository.MockAuthRepositoryImpl].
      */
     const val USE_MOCK_AUTH = true
+
+    /**
+     * Flag to enable/disable mock delays or fake sync for Incidencias flows.
+     */
+    const val USE_MOCK_INCIDENCIAS = true
 }

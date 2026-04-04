@@ -1,6 +1,7 @@
 package cu.uci.cisol.monitoreoambiental.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -55,6 +56,7 @@ import org.koin.androidx.compose.koinViewModel
 fun HomeScreen(
     onNuevaIncidencia: () -> Unit = {},
     onMisIncidencias: () -> Unit = {},
+    onVerBorradores: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel()
 ) {
@@ -161,6 +163,18 @@ fun HomeScreen(
                         ?.count ?: 0
                     if (pendientes > 0) {
                         PendientesBanner(cantidad = pendientes)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // Banner de Borradores
+                    val borradores = uiState.conteosPorEstado
+                        .firstOrNull { it.estado == cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia.BORRADOR }
+                        ?.count ?: 0
+                    if (borradores > 0) {
+                        BorradoresBanner(
+                            cantidad = borradores,
+                            onClick = onVerBorradores
+                        )
                     }
                 }
             }
@@ -215,6 +229,38 @@ private fun PendientesBanner(cantidad: Int) {
             Text(
                 text = "$cantidad incidencia${if (cantidad > 1) "s" else ""} aún no enviada${if (cantidad > 1) "s" else ""} al servidor.",
                 style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF795548))
+            )
+        }
+    }
+}
+
+@Composable
+private fun BorradoresBanner(
+    cantidad: Int,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFE3F2FD) // Light blue
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "📝 Tienes $cantidad borrador${if (cantidad > 1) "es" else ""}",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = AzulPrimario
+                )
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Toca para abrir y terminar de editar",
+                style = MaterialTheme.typography.bodySmall.copy(color = AzulSecundario)
             )
         }
     }

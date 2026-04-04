@@ -18,7 +18,7 @@ junitVersion = "1.1.5"
 espressoCore = "3.5.1"
 
 # Room
-room = "2.6.1"
+room = "2.7.0-alpha11"
 
 # Ktor
 ktor = "2.3.12"

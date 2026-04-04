@@ -14,6 +14,7 @@ val domainModule = module {
     factory { ObtenerIncidenciasPendientesUseCase(get()) }
     factory { ObtenerIncidenciasUseCase(get()) }
     factory { SincronizarIncidenciasUseCase(get()) }
+    factory { cu.uci.cisol.monitoreoambiental.domain.usecase.ActualizarEstadoIncidenciaUseCase(get()) }
 
     factory { GuardarUsuarioUseCase(get()) }
     factory { ObtenerUsuarioUseCase(get()) }

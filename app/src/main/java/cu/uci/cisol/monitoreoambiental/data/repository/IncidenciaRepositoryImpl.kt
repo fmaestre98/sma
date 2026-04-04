@@ -29,15 +29,36 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
 
     override suspend fun marcarComoEnviada(id: String): Result<Unit> = runCatching {
         withContext(Dispatchers.IO) {
-            incidenciaDao.actualizarEstado(id, EstadoIncidencia.NUEVA.name)
+            incidenciaDao.actualizarEstado(
+                id = id,
+                estado = EstadoIncidencia.NUEVA.name,
+                imagenResolucionPath = null,
+                sincronizado = true
+            )
         }
     }
 
+    override suspend fun actualizarEstado(
+        id: String,
+        estado: EstadoIncidencia,
+        imagenResolucionPath: String?
+    ): Result<Unit> = runCatching {
+        withContext(Dispatchers.IO) {
+            val syncStatus = (estado != EstadoIncidencia.BORRADOR && estado != EstadoIncidencia.PENDIENTE)
+            incidenciaDao.actualizarEstado(
+                id = id,
+                estado = estado.name,
+                imagenResolucionPath = imagenResolucionPath,
+                sincronizado = syncStatus
+            )
+        }
+    }
 
     override suspend fun enviarAlServidor(incidencia: Incidencia): Result<Unit> =
             runCatching {
                 // TODO: Implement Ktor network call here in the future
                 // For now, simulate success
+                actualizarEstado(incidencia.id, EstadoIncidencia.NUEVA, null)
             }
 
     override suspend fun obtenerPorId(id: String): Incidencia? {
@@ -50,10 +71,12 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     tematica = tematica.name,
                     descripcion = descripcion,
                     imagenPath = imagenPath,
+                    imagenResolucionPath = imagenResolucionPath,
                     latitud = latitud,
                     longitud = longitud,
                     fechaHora = fechaHora,
                     estado = estado.name,
+                    sincronizado = sincronizado
             )
 
     private fun IncidenciaEntity.toDomain() =
@@ -62,9 +85,11 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     tematica = enumValueOf<Tematica>(tematica),
                     descripcion = descripcion,
                     imagenPath = imagenPath,
+                    imagenResolucionPath = imagenResolucionPath,
                     latitud = latitud,
                     longitud = longitud,
                     fechaHora = fechaHora,
                     estado = enumValueOf<EstadoIncidencia>(estado),
+                    sincronizado = sincronizado
             )
 }

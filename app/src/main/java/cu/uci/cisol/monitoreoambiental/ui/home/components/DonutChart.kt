@@ -44,6 +44,7 @@ fun colorParaEstado(estado: EstadoIncidencia): Color = when (estado) {
     EstadoIncidencia.ACEPTADA -> ColorAceptada
     EstadoIncidencia.RESUELTA -> ColorResuelta
     EstadoIncidencia.RECHAZADA -> ColorRechazada
+    EstadoIncidencia.BORRADOR -> TODO()
 }
 
 @Composable

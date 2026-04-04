@@ -15,5 +15,5 @@ enum class Tematica(val label: String) {
     BACHES("Baches y Viales"),
     TRANSITO("Tránsito y Señalización"),
     ORDEN_PUBLICO("Orden Público"),
-    OTROS("Otros")
+    OTROS("Otros"),
 }

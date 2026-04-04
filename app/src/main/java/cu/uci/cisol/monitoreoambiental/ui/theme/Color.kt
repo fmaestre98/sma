@@ -22,3 +22,5 @@ val ColorNueva = Color(0xFF2196F3)        // Azul — enviada al servidor, pendi
 val ColorAceptada = Color(0xFF4CAF50)     // Verde
 val ColorResuelta = Color(0xFF1B5E20)     // Verde oscuro
 val ColorRechazada = Color(0xFFF44336)    // Rojo
+
+val ColorBorrador = Color(0xFFA9A8A8)
