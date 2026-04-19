@@ -37,6 +37,21 @@ import cu.uci.cisol.monitoreoambiental.ui.incidencia.EstadoChip
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.mapsforge.core.model.LatLong
+import org.mapsforge.map.android.graphics.AndroidGraphicFactory
+import org.mapsforge.map.android.util.AndroidUtil
+import org.mapsforge.map.android.view.MapView
+import org.mapsforge.map.datastore.MapDataStore
+import org.mapsforge.map.layer.Layer
+import org.mapsforge.map.layer.cache.TileCache
+import org.mapsforge.map.layer.renderer.TileRendererLayer
+import org.mapsforge.map.reader.MapFile
+import android.app.Application
+import org.mapsforge.map.rendertheme.InternalRenderTheme
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,6 +123,111 @@ fun NuevaIncidenciaScreen(
     )
 
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    if (state.showMapDialog) {
+        AlertDialog(
+            onDismissRequest = { onAction(NuevaIncidenciaAction.OnCerrarMapa) },
+            title = { Text("Seleccionar lugar") },
+            text = {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(400.dp)) {
+                    var mapFile by remember { mutableStateOf<File?>(null) }
+                    var isMapPreparing by remember { mutableStateOf(true) }
+
+                    LaunchedEffect(Unit) {
+                        try {
+                            AndroidGraphicFactory.createInstance(context.applicationContext as Application)
+                        } catch (e: Exception) {
+                            // Ignorar si ya está inicializado
+                        }
+                        
+                        mapFile = withContext(Dispatchers.IO) {
+                            val filename = "Cuba_oam.osm.map"
+                            val destFile = File(context.filesDir, filename)
+                            if (!destFile.exists()) {
+                                try {
+                                    context.assets.open(filename).use { input ->
+                                        FileOutputStream(destFile).use { output ->
+                                            input.copyTo(output)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    return@withContext null
+                                }
+                            }
+                            destFile
+                        }
+                        isMapPreparing = false
+                    }
+
+                    if (isMapPreparing) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            CircularProgressIndicator(color = AzulPrimario)
+                        }
+                    } else if (mapFile != null) {
+                        AndroidView(
+                            factory = { ctx ->
+                                MapView(ctx).apply {
+                                    isClickable = true
+                                    mapScaleBar.isVisible = true
+                                    
+                                    // Set default position
+                                    setCenter(LatLong(23.1492, -81.2494))
+                                    setZoomLevel(13.toByte())
+
+                                    // Tile cache
+                                    val tileCache: TileCache = AndroidUtil.createTileCache(
+                                        ctx, "mapcache",
+                                        model.displayModel.tileSize, 1f,
+                                        model.frameBufferModel.overdrawFactor
+                                    )
+
+                                    // Load map
+                                    val mapDataStore: MapDataStore = MapFile(mapFile)
+                                    val tileRendererLayer = TileRendererLayer(
+                                        tileCache, mapDataStore,
+                                        model.mapViewPosition,
+                                        AndroidGraphicFactory.INSTANCE
+                                    )
+                                    tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER)
+                                    layerManager.layers.add(tileRendererLayer)
+                                    
+                                    // Touch listener via Layer
+                                    val tapLayer = object : Layer() {
+                                        override fun draw(boundingBox: org.mapsforge.core.model.BoundingBox?, zoomLevel: Byte, canvas: org.mapsforge.core.graphics.Canvas?, topLeftPoint: org.mapsforge.core.model.Point?) {}
+                                        
+                                        override fun onTap(tapLatLong: LatLong?, layerXY: org.mapsforge.core.model.Point?, tapXY: org.mapsforge.core.model.Point?): Boolean {
+                                            if (tapLatLong != null) {
+                                                onAction(NuevaIncidenciaAction.OnMapLocationSelected(tapLatLong.latitude, tapLatLong.longitude))
+                                                // Optionally call OnCerrarMapa behavior if needed, currently done in the screen action handler or manual close
+                                            }
+                                            return true
+                                        }
+                                    }
+                                    layerManager.layers.add(tapLayer)
+                                }
+                            },
+                            onRelease = { mapView ->
+                                mapView.destroyAll()
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Text("Error al cargar mapa offline.", color = Color.Red)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { onAction(NuevaIncidenciaAction.OnCerrarMapa) }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },

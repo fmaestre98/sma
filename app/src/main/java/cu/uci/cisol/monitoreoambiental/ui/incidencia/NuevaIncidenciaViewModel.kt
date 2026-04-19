@@ -34,6 +34,7 @@ data class NuevaIncidenciaState(
     val estado: EstadoIncidencia = EstadoIncidencia.BORRADOR,
     val imagenResolucionUri: Uri? = null,
     val isLoading: Boolean = false,
+    val showMapDialog: Boolean = false,
     val error: String? = null
 )
 
@@ -46,6 +47,8 @@ sealed interface NuevaIncidenciaAction {
     data class OnCoordenadasObtenidas(val lat: Double, val lng: Double) : NuevaIncidenciaAction
     object OnCoordenadasError : NuevaIncidenciaAction
     object OnSeleccionarEnMapa : NuevaIncidenciaAction
+    object OnCerrarMapa : NuevaIncidenciaAction
+    data class OnMapLocationSelected(val lat: Double, val lng: Double) : NuevaIncidenciaAction
     object OnGuardarBorrador : NuevaIncidenciaAction
     object OnEnviarAlServidor : NuevaIncidenciaAction
     object OnMarcarComoResuelta : NuevaIncidenciaAction
@@ -148,8 +151,18 @@ class NuevaIncidenciaViewModel(
                 }
             }
             is NuevaIncidenciaAction.OnSeleccionarEnMapa -> {
-                viewModelScope.launch {
-                    _events.send(NuevaIncidenciaEvent.ShowSnackbar("Selección en mapa en desarrollo"))
+                _state.update { it.copy(showMapDialog = true) }
+            }
+            is NuevaIncidenciaAction.OnCerrarMapa -> {
+                _state.update { it.copy(showMapDialog = false) }
+            }
+            is NuevaIncidenciaAction.OnMapLocationSelected -> {
+                _state.update {
+                    it.copy(
+                        latitud = action.lat,
+                        longitud = action.lng,
+                        showMapDialog = false
+                    )
                 }
             }
             is NuevaIncidenciaAction.OnGuardarBorrador -> {

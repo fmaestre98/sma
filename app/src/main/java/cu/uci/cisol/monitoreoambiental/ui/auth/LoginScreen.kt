@@ -94,10 +94,10 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        /*Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
             Text("Recuérdame", color = Color.Gray, fontSize = 14.sp)
-        }
+        }*/
 
         Spacer(modifier = Modifier.height(24.dp))
 

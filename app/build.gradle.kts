@@ -100,6 +100,11 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.maps.compose)
 
+    // Biblioteca principal de Mapsforge para mapas offline
+    implementation(libs.mapsforge.map.android)
+    implementation(libs.mapsforge.map)
+    implementation(libs.mapsforge.themes)
+
     implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.androidx.core.splashscreen)

@@ -9,6 +9,9 @@ coreKtx = "1.17.0"
 lifecycleRuntimeKtx = "2.8.6"
 activityCompose = "1.12.4"
 composeBom = "2024.09.00"
+mapsforgeMap = "0.20.0"
+mapsforgeMapAndroid = "0.20.0"
+mapsforgeThemes = "0.20.0"
 splashscreen = "1.0.1"
 
 
@@ -107,6 +110,9 @@ accompanist-permissions = { group = "com.google.accompanist", name = "accompanis
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinSerialization" }
 
 # Location & Maps
+mapsforge-map = { module = "org.mapsforge:mapsforge-map", version.ref = "mapsforgeMap" }
+mapsforge-map-android = { module = "org.mapsforge:mapsforge-map-android", version.ref = "mapsforgeMapAndroid" }
+mapsforge-themes = { module = "org.mapsforge:mapsforge-themes", version.ref = "mapsforgeThemes" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 maps-compose = { group = "com.google.maps.android", name = "maps-compose", version.ref = "mapsCompose" }
 
