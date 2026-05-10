@@ -25,28 +25,19 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
+import cu.uci.cisol.monitoreoambiental.ui.home.EstadoCount
 import cu.uci.cisol.monitoreoambiental.ui.home.MonthlyData
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorNueva
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorAceptada
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorRechazada
-
-// Estados a mostrar en el gráfico de barras (los más relevantes para seguimiento)
-private val ESTADOS_BARRA = listOf(
-    EstadoIncidencia.NUEVA to ColorNueva,
-    EstadoIncidencia.ACEPTADA to ColorAceptada,
-    EstadoIncidencia.RECHAZADA to ColorRechazada
-)
 
 @Composable
 fun BarChart(
     datos: List<MonthlyData>,
+    estados: List<EstadoCount>,
     modifier: Modifier = Modifier
 ) {
-    if (datos.isEmpty()) return
+    if (datos.isEmpty() || estados.isEmpty()) return
 
     val maxValor = datos.maxOf { mes ->
-        ESTADOS_BARRA.sumOf { (estado, _) -> mes.counts.getOrDefault(estado, 0) }
+        estados.sumOf { estado -> mes.counts[estado.id] ?: 0 }
     }.takeIf { it > 0 } ?: 1
 
     val animProgress = remember { Animatable(0f) }
@@ -68,7 +59,7 @@ fun BarChart(
             val availableHeight = chartHeight - 24.dp.toPx()
             val slotWidth = chartWidth / datos.size
             val barGroupWidth = slotWidth * 0.8f
-            val barWidth = barGroupWidth / ESTADOS_BARRA.size
+            val barWidth = barGroupWidth / estados.size
             val cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
 
             // Líneas guía horizontales
@@ -88,15 +79,15 @@ fun BarChart(
                 val slotLeft = index * slotWidth
                 val groupLeft = slotLeft + (slotWidth - barGroupWidth) / 2f
 
-                ESTADOS_BARRA.forEachIndexed { barIndex, (estado, color) ->
-                    val valor = mes.counts.getOrDefault(estado, 0)
+                estados.forEachIndexed { barIndex, estado ->
+                    val valor = mes.counts[estado.id] ?: 0
                     val barHeight = (valor.toFloat() / maxValor) * availableHeight * animProgress.value
                     val barLeft = groupLeft + barIndex * barWidth
                     val barTop = availableHeight - barHeight
 
                     if (barHeight > 0f) {
                         drawRoundRect(
-                            color = color,
+                            color = colorFromHex(estado.colorHex),
                             topLeft = Offset(barLeft, barTop),
                             size = Size(barWidth - 1.dp.toPx(), barHeight),
                             cornerRadius = cornerRadius
@@ -125,17 +116,17 @@ fun BarChart(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            ESTADOS_BARRA.forEach { (estado, color) ->
+            estados.forEach { estado ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Canvas(modifier = Modifier.width(12.dp).height(12.dp)) {
                         drawRoundRect(
-                            color = color,
+                            color = colorFromHex(estado.colorHex),
                             cornerRadius = CornerRadius(2.dp.toPx())
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = estado.label,
+                        text = estado.nombre,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 11.sp,
                             color = Color.Gray

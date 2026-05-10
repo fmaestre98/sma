@@ -8,8 +8,8 @@ interface IncidenciaRepository {
     suspend fun guardar(incidencia: Incidencia): Result<Unit>
     fun observarTodas(): Flow<List<Incidencia>>
     suspend fun obtenerPendientes(): List<Incidencia>
-    suspend fun marcarComoEnviada(id: String): Result<Unit>
-    suspend fun enviarAlServidor(incidencia: Incidencia): Result<Unit>
+    suspend fun marcarComoEnviada(id: String, estadoId: String): Result<Unit>
+    suspend fun enviarAlServidor(incidencia: Incidencia, defaultEstadoId: String): Result<Unit>
     suspend fun obtenerPorId(id: String): Incidencia?
     /**
      * Actualiza el estado de una incidencia.
@@ -17,7 +17,8 @@ interface IncidenciaRepository {
      */
     suspend fun actualizarEstado(
         id: String,
-        estado: EstadoIncidencia,
+        estadoId: String,
+        esBorrador: Boolean,
         imagenResolucionPath: String? = null,
     ): Result<Unit>
 }

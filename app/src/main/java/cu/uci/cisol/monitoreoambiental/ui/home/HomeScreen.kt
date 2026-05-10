@@ -140,7 +140,7 @@ fun HomeScreen(
                     // Tarjeta: Gráfico Donut
                     SectionCard(titulo = "Incidencias") {
                         DonutChart(
-                            conteos = uiState.conteosPorEstado,
+                            conteos = uiState.conteosPorEstado.filter { it.count > 0 },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -151,6 +151,7 @@ fun HomeScreen(
                     SectionCard(titulo = "Incidencias por meses") {
                         BarChart(
                             datos = uiState.datosMensuales,
+                            estados = uiState.conteosPorEstado,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -158,18 +159,14 @@ fun HomeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Tarjeta: resumen rápido de estados sin enviar
-                    val pendientes = uiState.conteosPorEstado
-                        .firstOrNull { it.estado == cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia.PENDIENTE }
-                        ?.count ?: 0
+                    val pendientes = uiState.totalPendientes
                     if (pendientes > 0) {
                         PendientesBanner(cantidad = pendientes)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     // Banner de Borradores
-                    val borradores = uiState.conteosPorEstado
-                        .firstOrNull { it.estado == cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia.BORRADOR }
-                        ?.count ?: 0
+                    val borradores = uiState.totalBorradores
                     if (borradores > 0) {
                         BorradoresBanner(
                             cantidad = borradores,

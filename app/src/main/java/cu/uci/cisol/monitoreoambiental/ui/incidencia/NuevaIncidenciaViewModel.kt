@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
+import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
 import kotlinx.coroutines.channels.Channel
@@ -31,7 +32,9 @@ data class NuevaIncidenciaState(
     val longitud: Double? = null,
     val obteniendoCoordenadas: Boolean = false,
     val modo: FormMode = FormMode.CREAR,
-    val estado: EstadoIncidencia = EstadoIncidencia.BORRADOR,
+    val estadoId: String? = null,
+    val esBorrador: Boolean = true,
+    val estados: List<EstadoIncidencia> = emptyList(),
     val imagenResolucionUri: Uri? = null,
     val isLoading: Boolean = false,
     val showMapDialog: Boolean = false,
@@ -40,6 +43,15 @@ data class NuevaIncidenciaState(
     /** Convenience to get the currently selected Tematica object from the list. */
     val selectedTematica: Tematica?
         get() = tematicas.firstOrNull { it.id == tematicaId }
+
+    val estadoLocal: EstadoIncidencia?
+        get() = estados.firstOrNull { it.id == estadoId }
+
+    val estadoNombre: String
+        get() = if (esBorrador) "Borrador" else estadoLocal?.name ?: "Desconocido"
+
+    val estadoColorHex: String
+        get() = if (esBorrador) "#9E9E9E" else estadoLocal?.colorHex ?: "#9E9E9E"
 }
 
 sealed interface NuevaIncidenciaAction {
@@ -68,7 +80,8 @@ sealed interface NuevaIncidenciaEvent {
 class NuevaIncidenciaViewModel(
     savedStateHandle: SavedStateHandle,
     private val incidenciaRepository: IncidenciaRepository,
-    private val tematicaRepository: TematicaRepository
+    private val tematicaRepository: TematicaRepository,
+    private val estadoRepository: EstadoRepository
 ) : ViewModel() {
 
     private val incidenciaIdArg: String? = savedStateHandle["incidenciaId"]
@@ -81,6 +94,7 @@ class NuevaIncidenciaViewModel(
 
     init {
         observeTematicas()
+        observeEstados()
 
         if (!incidenciaIdArg.isNullOrEmpty() && incidenciaIdArg != "{incidenciaId}") {
             cargarIncidencia(incidenciaIdArg)
@@ -102,6 +116,14 @@ class NuevaIncidenciaViewModel(
         }
     }
 
+    private fun observeEstados() {
+        viewModelScope.launch {
+            estadoRepository.observeEstados().collect { estados ->
+                _state.update { it.copy(estados = estados) }
+            }
+        }
+    }
+
     private fun cargarIncidencia(id: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
@@ -117,7 +139,8 @@ class NuevaIncidenciaViewModel(
                         latitud = incidencia.latitud,
                         longitud = incidencia.longitud,
                         modo = FormMode.EDITAR,
-                        estado = incidencia.estado,
+                        estadoId = incidencia.estadoId,
+                        esBorrador = incidencia.esBorrador,
                         isLoading = false
                     )
                 }
@@ -192,10 +215,10 @@ class NuevaIncidenciaViewModel(
                 }
             }
             is NuevaIncidenciaAction.OnGuardarBorrador -> {
-                guardar(EstadoIncidencia.BORRADOR)
+                guardar(esBorradorFinal = true)
             }
             is NuevaIncidenciaAction.OnEnviarAlServidor -> {
-                guardar(EstadoIncidencia.NUEVA)
+                guardar(esBorradorFinal = false)
             }
             is NuevaIncidenciaAction.OnMarcarComoResuelta -> {
                 marcarResuelta()
@@ -203,13 +226,27 @@ class NuevaIncidenciaViewModel(
         }
     }
 
-    private fun guardar(estadoFinal: EstadoIncidencia) {
+    private fun guardar(esBorradorFinal: Boolean) {
         val currentState = _state.value
         if (currentState.tematicaId == null || currentState.descripcion.isBlank()) {
             viewModelScope.launch {
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Por favor complete temática y descripción"))
             }
             return
+        }
+
+        val baseEstadoId = currentState.estados.minByOrNull { it.weight }?.id
+        if (!esBorradorFinal && baseEstadoId == null) {
+            viewModelScope.launch {
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Error: Estados no cargados. Sincronice primero."))
+            }
+            return
+        }
+
+        val resolvedEstadoId = if (esBorradorFinal) {
+            currentState.estadoId ?: baseEstadoId ?: ""
+        } else {
+            baseEstadoId!!
         }
 
         viewModelScope.launch {
@@ -224,15 +261,16 @@ class NuevaIncidenciaViewModel(
                 latitud = currentState.latitud,
                 longitud = currentState.longitud,
                 fechaHora = System.currentTimeMillis(),
-                estado = estadoFinal,
+                estadoId = resolvedEstadoId,
+                esBorrador = esBorradorFinal,
                 sincronizado = false // By default is false when saving via the form
             )
 
             val result = incidenciaRepository.guardar(incidencia)
             if (result.isSuccess) {
-                if (estadoFinal == EstadoIncidencia.NUEVA && cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {
+                if (!esBorradorFinal && cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {
                     delay(1000) // mock delay
-                    incidenciaRepository.enviarAlServidor(incidencia)
+                    incidenciaRepository.enviarAlServidor(incidencia, resolvedEstadoId)
                 }
                 
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Incidencia guardada correctamente"))
@@ -246,17 +284,26 @@ class NuevaIncidenciaViewModel(
 
     private fun marcarResuelta() {
         val currentState = _state.value
-        // Al marcar como resuelta, primero cambiamos el estado y actualizamos DB
+        val resueltaEstadoId = currentState.estados.find { it.name.equals("Resuelta", ignoreCase = true) }?.id
+        
+        if (resueltaEstadoId == null) {
+            viewModelScope.launch {
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("No se encontró el estado Resuelta"))
+            }
+            return
+        }
+
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
             val result = incidenciaRepository.actualizarEstado(
                 id = currentState.incidenciaId,
-                estado = EstadoIncidencia.RESUELTA,
+                estadoId = resueltaEstadoId,
+                esBorrador = false,
                 imagenResolucionPath = currentState.imagenResolucionUri?.toString()
             )
             
             if (result.isSuccess) {
-                _state.update { it.copy(estado = EstadoIncidencia.RESUELTA, isLoading = false) }
+                _state.update { it.copy(estadoId = resueltaEstadoId, esBorrador = false, isLoading = false) }
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Marcada como resuelta"))
             } else {
                 _state.update { it.copy(isLoading = false) }

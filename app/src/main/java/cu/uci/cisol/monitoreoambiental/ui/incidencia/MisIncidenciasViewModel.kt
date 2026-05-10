@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
+import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +25,9 @@ data class IncidenciaUi(
     val id: String,
     val tematica: String,
     val descripcionCorta: String,
-    val estado: EstadoIncidencia,
+    val estadoNombre: String,
+    val estadoColorHex: String,
+    val esBorrador: Boolean,
     val horaFormateada: String,
     val fechaAbsoluta: Long // For sorting
 )
@@ -49,7 +52,8 @@ sealed interface MisIncidenciasAction {
 class MisIncidenciasViewModel(
     savedStateHandle: SavedStateHandle,
     private val incidenciaRepository: IncidenciaRepository,
-    private val tematicaRepository: TematicaRepository
+    private val tematicaRepository: TematicaRepository,
+    private val estadoRepository: EstadoRepository
 ) : ViewModel() {
 
     private val filtroArg = savedStateHandle.get<String>("filtro")
@@ -74,10 +78,12 @@ class MisIncidenciasViewModel(
         viewModelScope.launch {
             combine(
                 incidenciaRepository.observarTodas(),
-                tematicaRepository.observeTematicas()
-            ) { incidencias, tematicas ->
+                tematicaRepository.observeTematicas(),
+                estadoRepository.observeEstados()
+            ) { incidencias, tematicas, estados ->
                 val tematicaMap = tematicas.associateBy { it.id }
-                incidencias.map { it.toUi(tematicaMap) }
+                val estadoMap = estados.associateBy { it.id }
+                incidencias.map { it.toUi(tematicaMap, estadoMap) }
             }
                 .catch { e ->
                     _state.update { it.copy(isLoading = false, error = e.message) }
@@ -102,8 +108,8 @@ class MisIncidenciasViewModel(
         val filtroActual = _state.value.filtro
         val filtradas = when (filtroActual) {
             IncidenciaFiltro.TODAS -> todasIncidencias
-            IncidenciaFiltro.BORRADORES -> todasIncidencias.filter { it.estado == EstadoIncidencia.BORRADOR }
-            IncidenciaFiltro.ENVIADAS -> todasIncidencias.filter { it.estado != EstadoIncidencia.BORRADOR }
+            IncidenciaFiltro.BORRADORES -> todasIncidencias.filter { it.esBorrador }
+            IncidenciaFiltro.ENVIADAS -> todasIncidencias.filter { !it.esBorrador }
         }
 
         val agrupadas = filtradas.groupBy { it.getFechaFormateada() }
@@ -116,13 +122,17 @@ class MisIncidenciasViewModel(
         }
     }
 
-    private fun Incidencia.toUi(tematicaMap: Map<String, Tematica>): IncidenciaUi {
+    private fun Incidencia.toUi(tematicaMap: Map<String, Tematica>, estadoMap: Map<String, EstadoIncidencia>): IncidenciaUi {
         val date = Date(fechaHora)
+        val estadoLocal = estadoMap[estadoId]
+        
         return IncidenciaUi(
             id = id,
             tematica = tematicaMap[tematicaId]?.name ?: tematicaId,
             descripcionCorta = if (descripcion.length > 80) "${descripcion.take(80)}..." else descripcion,
-            estado = estado,
+            estadoNombre = if (esBorrador) "Borrador" else estadoLocal?.name ?: "Desconocido",
+            estadoColorHex = if (esBorrador) "#9E9E9E" else estadoLocal?.colorHex ?: "#9E9E9E",
+            esBorrador = esBorrador,
             horaFormateada = timeFormatter.format(date),
             fechaAbsoluta = fechaHora
         )

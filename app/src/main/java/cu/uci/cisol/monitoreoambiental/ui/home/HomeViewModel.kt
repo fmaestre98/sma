@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
 
 // -----------------------
 // Configuración de datos de prueba
@@ -21,17 +23,19 @@ import kotlinx.coroutines.launch
 // -----------------------
 private const val USE_MOCK_DATA = true
 
-data class EstadoCount(val estado: EstadoIncidencia, val count: Int)
+data class EstadoCount(val id: String, val nombre: String, val colorHex: String, val count: Int)
 
 data class MonthlyData(
     val mes: String,
-    val counts: Map<EstadoIncidencia, Int>
+    val counts: Map<String, Int> // Map of estadoId to count
 )
 
 data class HomeUiState(
     val incidencias: List<Incidencia> = emptyList(),
     val conteosPorEstado: List<EstadoCount> = emptyList(),
     val datosMensuales: List<MonthlyData> = emptyList(),
+    val totalBorradores: Int = 0,
+    val totalPendientes: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null,
     val logoutCompleted: Boolean = false,
@@ -41,7 +45,8 @@ data class HomeUiState(
 class HomeViewModel(
     private val repository: IncidenciaRepository,
     private val authRepository: AuthRepository,
-    private val tematicaRepository: TematicaRepository
+    private val tematicaRepository: TematicaRepository,
+    private val estadoRepository: EstadoRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
@@ -49,6 +54,7 @@ class HomeViewModel(
 
     init {
         syncTematicas()
+        syncEstados()
         cargarDatos()
     }
 
@@ -80,7 +86,11 @@ class HomeViewModel(
             }
         }
     }
-
+    private fun syncEstados() {
+        viewModelScope.launch {
+            estadoRepository.syncEstados()
+        }
+    }
     private fun cargarDatos() {
         if (USE_MOCK_DATA) {
             cargarDatosMock()
@@ -91,11 +101,11 @@ class HomeViewModel(
 
     private fun cargarDatosMock() {
         val conteosSimulados = listOf(
-            EstadoCount(EstadoIncidencia.PENDIENTE, 8),
-            EstadoCount(EstadoIncidencia.NUEVA, 15),
-            EstadoCount(EstadoIncidencia.ACEPTADA, 42),
-            EstadoCount(EstadoIncidencia.RESUELTA, 38),
-            EstadoCount(EstadoIncidencia.RECHAZADA, 20)
+            EstadoCount("pendiente-id", "Pendiente", "#FF9800", 8),
+            EstadoCount("nueva-id", "Nueva", "#2196F3", 15),
+            EstadoCount("aceptada-id", "Aceptada", "#4CAF50", 42),
+            EstadoCount("resuelta-id", "Resuelta", "#009688", 38),
+            EstadoCount("rechazada-id", "Rechazada", "#F44336", 20)
         )
 
         val meses = listOf("E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
@@ -103,9 +113,9 @@ class HomeViewModel(
             MonthlyData(
                 mes = mes,
                 counts = mapOf(
-                    EstadoIncidencia.NUEVA to (5 + (index * 3) % 20),
-                    EstadoIncidencia.ACEPTADA to (10 + (index * 5) % 35),
-                    EstadoIncidencia.RECHAZADA to (3 + (index * 2) % 15)
+                    "nueva-id" to (5 + (index * 3) % 20),
+                    "aceptada-id" to (10 + (index * 5) % 35),
+                    "rechazada-id" to (3 + (index * 2) % 15)
                 )
             )
         }
@@ -119,25 +129,33 @@ class HomeViewModel(
 
     private fun cargarDatosReales() {
         viewModelScope.launch {
-            repository.observarTodas()
+            combine(
+                repository.observarTodas(),
+                estadoRepository.observeEstados()
+            ) { incidencias, estados ->
+                procesarIncidencias(incidencias, estados)
+            }
                 .catch { e ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         error = e.message
                     )
                 }
-                .map { incidencias: List<Incidencia> -> procesarIncidencias(incidencias) }
-                .collect { nuevoEstado: HomeUiState ->
+                .collect { nuevoEstado ->
                     _uiState.value = nuevoEstado
                 }
         }
     }
 
     @OptIn(ExperimentalStdlibApi::class)
-    private fun procesarIncidencias(incidencias: List<Incidencia>): HomeUiState {
-        val conteosPorEstado = EstadoIncidencia.entries.map { estado ->
-            EstadoCount(estado, incidencias.count { it.estado == estado })
-        }.filter { it.count > 0 }
+    private fun procesarIncidencias(incidencias: List<Incidencia>, estados: List<EstadoIncidencia>): HomeUiState {
+        val noBorradores = incidencias.filter { !it.esBorrador }
+        val conteosPorEstado = estados.map { estado ->
+            EstadoCount(estado.id, estado.name, estado.colorHex, noBorradores.count { it.estadoId == estado.id })
+        }
+
+        val totalBorradores = incidencias.count { it.esBorrador }
+        val totalPendientes = noBorradores.count { !it.sincronizado }
 
         val meses = listOf("E", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D")
         val datosMensuales = meses.mapIndexed { index, mes ->
@@ -149,8 +167,8 @@ class HomeViewModel(
             }
             MonthlyData(
                 mes = mes,
-                counts = EstadoIncidencia.entries.associateWith { estado ->
-                    delMes.count { it.estado == estado }
+                counts = estados.associate { estado ->
+                    estado.id to delMes.count { it.estadoId == estado.id }
                 }
             )
         }
@@ -159,6 +177,8 @@ class HomeViewModel(
             incidencias = incidencias,
             conteosPorEstado = conteosPorEstado,
             datosMensuales = datosMensuales,
+            totalBorradores = totalBorradores,
+            totalPendientes = totalPendientes,
             isLoading = false
         )
     }

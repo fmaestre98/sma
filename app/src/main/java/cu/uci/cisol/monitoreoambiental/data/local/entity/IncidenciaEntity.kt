@@ -14,7 +14,8 @@ data class IncidenciaEntity(
     val latitud: Double?,
     val longitud: Double?,
     val fechaHora: Long,
-    val estado: String,
+    val estadoId: String,
+    val esBorrador: Boolean,
     /** true si ya fue sincronizada con el servidor. */
     val sincronizado: Boolean = false,
 )

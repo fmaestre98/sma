@@ -13,7 +13,7 @@ data class TematicaEntity(
     val updatedAt: String,
     val language: String,
     val name: String,
-    val description: String,
+    val description: String?,
     val colorHex: String
 )
 

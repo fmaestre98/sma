@@ -1,5 +1,6 @@
 package cu.uci.cisol.monitoreoambiental.data.remote
 
+import cu.uci.cisol.monitoreoambiental.data.remote.dto.EstadosResponseDto
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.TematicasResponseDto
 import cu.uci.cisol.monitoreoambiental.data.util.getSafe
 import cu.uci.cisol.monitoreoambiental.domain.util.DataError
@@ -14,5 +15,9 @@ class ManagementApi(private val client: HttpClient) {
 
     suspend fun getTematicas(): Result<TematicasResponseDto, DataError.Network> {
         return client.getSafe("$BASE_URL/themes/?is_active=true")
+    }
+
+    suspend fun getEstados(): Result<EstadosResponseDto, DataError.Network> {
+        return client.getSafe("$BASE_URL/states/?is_active=true")
     }
 }

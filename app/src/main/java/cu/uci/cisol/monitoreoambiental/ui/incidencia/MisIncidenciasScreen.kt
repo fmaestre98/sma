@@ -43,7 +43,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulPrimario
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulSecundario
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulSurface
@@ -227,20 +226,17 @@ fun IncidenciaCard(
                 color = Color.DarkGray
             )
             Spacer(modifier = Modifier.height(12.dp))
-            EstadoChip(estado = incidencia.estado)
+            EstadoChip(nombre = incidencia.estadoNombre, colorHex = incidencia.estadoColorHex)
         }
     }
 }
 
 @Composable
-fun EstadoChip(estado: EstadoIncidencia) {
-    val color = when (estado) {
-        EstadoIncidencia.BORRADOR -> Color.Gray
-        EstadoIncidencia.PENDIENTE -> ColorPendiente
-        EstadoIncidencia.NUEVA -> ColorNueva
-        EstadoIncidencia.ACEPTADA -> ColorAceptada
-        EstadoIncidencia.RESUELTA -> ColorResuelta
-        EstadoIncidencia.RECHAZADA -> ColorRechazada
+fun EstadoChip(nombre: String, colorHex: String) {
+    val color = try {
+        Color(android.graphics.Color.parseColor(colorHex))
+    } catch (e: Exception) {
+        Color.Gray
     }
 
     Box(
@@ -251,7 +247,7 @@ fun EstadoChip(estado: EstadoIncidencia) {
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = estado.label,
+            text = nombre,
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
             color = color
         )

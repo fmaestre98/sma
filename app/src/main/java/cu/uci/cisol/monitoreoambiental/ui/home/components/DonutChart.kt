@@ -29,22 +29,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.ui.home.EstadoCount
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulPrimario
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorAceptada
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorNueva
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorPendiente
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorRechazada
-import cu.uci.cisol.monitoreoambiental.ui.theme.ColorResuelta
-
-fun colorParaEstado(estado: EstadoIncidencia): Color = when (estado) {
-    EstadoIncidencia.PENDIENTE -> ColorPendiente
-    EstadoIncidencia.NUEVA -> ColorNueva
-    EstadoIncidencia.ACEPTADA -> ColorAceptada
-    EstadoIncidencia.RESUELTA -> ColorResuelta
-    EstadoIncidencia.RECHAZADA -> ColorRechazada
-    EstadoIncidencia.BORRADOR -> TODO()
+fun colorFromHex(hex: String): Color {
+    return try {
+        Color(android.graphics.Color.parseColor(hex))
+    } catch (e: Exception) {
+        Color.Gray
+    }
 }
 
 @Composable
@@ -92,7 +84,7 @@ fun DonutChart(
                 conteos.forEach { estadoCount ->
                     val sweep = (estadoCount.count.toFloat() / total) * 360f * animProgress.value
                     drawArc(
-                        color = colorParaEstado(estadoCount.estado),
+                        color = colorFromHex(estadoCount.colorHex),
                         startAngle = startAngle,
                         sweepAngle = sweep,
                         useCenter = false,
@@ -137,8 +129,8 @@ fun DonutChart(
             ) {
                 pair.forEach { estadoCount ->
                     LeyendaItem(
-                        color = colorParaEstado(estadoCount.estado),
-                        label = estadoCount.estado.label,
+                        color = colorFromHex(estadoCount.colorHex),
+                        label = estadoCount.nombre,
                         count = estadoCount.count,
                         total = total,
                         modifier = Modifier.weight(1f)

@@ -26,11 +26,11 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
         }
     }
 
-    override suspend fun marcarComoEnviada(id: String): Result<Unit> = runCatching {
+    override suspend fun marcarComoEnviada(id: String, estadoId: String): Result<Unit> = runCatching {
         withContext(Dispatchers.IO) {
             incidenciaDao.actualizarEstado(
                 id = id,
-                estado = EstadoIncidencia.NUEVA.name,
+                estadoId = estadoId,
                 imagenResolucionPath = null,
                 sincronizado = true
             )
@@ -39,25 +39,26 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
 
     override suspend fun actualizarEstado(
         id: String,
-        estado: EstadoIncidencia,
+        estadoId: String,
+        esBorrador: Boolean,
         imagenResolucionPath: String?
     ): Result<Unit> = runCatching {
         withContext(Dispatchers.IO) {
-            val syncStatus = (estado != EstadoIncidencia.BORRADOR && estado != EstadoIncidencia.PENDIENTE)
+            val syncStatus = !esBorrador
             incidenciaDao.actualizarEstado(
                 id = id,
-                estado = estado.name,
+                estadoId = estadoId,
                 imagenResolucionPath = imagenResolucionPath,
                 sincronizado = syncStatus
             )
         }
     }
 
-    override suspend fun enviarAlServidor(incidencia: Incidencia): Result<Unit> =
+    override suspend fun enviarAlServidor(incidencia: Incidencia, defaultEstadoId: String): Result<Unit> =
             runCatching {
                 // TODO: Implement Ktor network call here in the future
                 // For now, simulate success
-                actualizarEstado(incidencia.id, EstadoIncidencia.NUEVA, null)
+                actualizarEstado(incidencia.id, defaultEstadoId, esBorrador = false, null)
             }
 
     override suspend fun obtenerPorId(id: String): Incidencia? {
@@ -74,7 +75,8 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     latitud = latitud,
                     longitud = longitud,
                     fechaHora = fechaHora,
-                    estado = estado.name,
+                    estadoId = estadoId,
+                    esBorrador = esBorrador,
                     sincronizado = sincronizado
             )
 
@@ -88,7 +90,8 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
                     latitud = latitud,
                     longitud = longitud,
                     fechaHora = fechaHora,
-                    estado = enumValueOf<EstadoIncidencia>(estado),
+                    estadoId = estadoId,
+                    esBorrador = esBorrador,
                     sincronizado = sincronizado
             )
 }

@@ -11,7 +11,8 @@ data class Incidencia(
     val latitud: Double?,
     val longitud: Double?,
     val fechaHora: Long,              // epoch millis
-    val estado: EstadoIncidencia,
+    val estadoId: String,
+    val esBorrador: Boolean,
     /** true si ya fue sincronizada con el servidor. */
     val sincronizado: Boolean = false,
 )

@@ -10,7 +10,7 @@ interface IncidenciaDao {
     @Query("SELECT * FROM incidencias ORDER BY fechaHora DESC")
     fun observarTodas(): Flow<List<IncidenciaEntity>>
 
-    @Query("SELECT * FROM incidencias WHERE estado = 'PENDIENTE' ORDER BY fechaHora ASC")
+    @Query("SELECT * FROM incidencias WHERE sincronizado = 0 AND esBorrador = 0 ORDER BY fechaHora ASC")
     suspend fun obtenerPendientes(): List<IncidenciaEntity>
 
     @Query("SELECT * FROM incidencias WHERE id = :id")
@@ -21,14 +21,14 @@ interface IncidenciaDao {
 
     @Query(
         """UPDATE incidencias
-           SET estado = :estado,
+           SET estadoId = :estadoId,
                imagenResolucionPath = COALESCE(:imagenResolucionPath, imagenResolucionPath),
                sincronizado = :sincronizado
            WHERE id = :id"""
     )
     suspend fun actualizarEstado(
         id: String,
-        estado: String,
+        estadoId: String,
         imagenResolucionPath: String?,
         sincronizado: Boolean,
     )

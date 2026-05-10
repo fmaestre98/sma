@@ -21,7 +21,7 @@ data class TematicaDto(
     @SerialName("updated_at") val updatedAt: String,
     val language: String,
     val name: String,
-    val description: String,
+    val description: String? = null,
     @SerialName("color_hex") val colorHex: String
 )
 

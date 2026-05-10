@@ -298,7 +298,7 @@ fun NuevaIncidenciaScreen(
                             text = "Estado actual:",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
-                        EstadoChip(estado = state.estado)
+                        EstadoChip(nombre = state.estadoNombre, colorHex = state.estadoColorHex)
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -482,7 +482,7 @@ fun NuevaIncidenciaScreen(
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    if (state.estado == EstadoIncidencia.RESUELTA) {
+                    if (state.estadoNombre.equals("Resuelta", ignoreCase = true)) {
                         Text(
                             text = "Foto de Resolución (Evidencia)",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
@@ -500,7 +500,7 @@ fun NuevaIncidenciaScreen(
                                 contentScale = ContentScale.Crop
                             )
                         }
-                    } else if (state.estado != EstadoIncidencia.RESUELTA && state.estado != EstadoIncidencia.BORRADOR) {
+                    } else if (!state.estadoNombre.equals("Resuelta", ignoreCase = true) && !state.esBorrador) {
                         Button(
                             onClick = {
                                 if (cameraPermissionState.status.isGranted) {
@@ -523,7 +523,7 @@ fun NuevaIncidenciaScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 // Bottom Buttons
-                if (state.modo == FormMode.CREAR || state.estado == EstadoIncidencia.BORRADOR) {
+                if (state.modo == FormMode.CREAR || state.esBorrador) {
                     Row(modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(
                             onClick = { onAction(NuevaIncidenciaAction.OnGuardarBorrador) },

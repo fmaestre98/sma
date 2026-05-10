@@ -24,7 +24,8 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
             latitud = 23.113592,
             longitud = -82.366592,
             fechaHora = now,
-            estado = EstadoIncidencia.BORRADOR,
+            estadoId = "mock-base-estado",
+            esBorrador = true,
             sincronizado = false
         ),
         Incidencia(
@@ -36,7 +37,8 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
             latitud = 23.123592,
             longitud = -82.376592,
             fechaHora = now - (oneDay * 1),
-            estado = EstadoIncidencia.PENDIENTE,
+            estadoId = "mock-base-estado",
+            esBorrador = false,
             sincronizado = false
         ),
         Incidencia(
@@ -48,31 +50,8 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
             latitud = 23.133592,
             longitud = -82.386592,
             fechaHora = now - (oneDay * 2),
-            estado = EstadoIncidencia.NUEVA,
-            sincronizado = true
-        ),
-        Incidencia(
-            id = UUID.randomUUID().toString(),
-            tematicaId = "mock-salideros-agua",
-            descripcion = "Salidero de agua potable continuo desde hace 3 días en la avenida principal.",
-            imagenesPaths = emptyList(),
-            imagenResolucionPath = null,
-            latitud = 23.143592,
-            longitud = -82.396592,
-            fechaHora = now - (oneDay * 3),
-            estado = EstadoIncidencia.ACEPTADA,
-            sincronizado = true
-        ),
-        Incidencia(
-            id = UUID.randomUUID().toString(),
-            tematicaId = "mock-orden-publico",
-            descripcion = "Ruidos molestos a altas horas de la noche por centro recreativo cercano.",
-            imagenesPaths = emptyList(),
-            imagenResolucionPath = null,
-            latitud = 23.153592,
-            longitud = -82.406592,
-            fechaHora = now - (oneDay * 5),
-            estado = EstadoIncidencia.RESUELTA,
+            estadoId = "mock-base-estado",
+            esBorrador = false,
             sincronizado = true
         )
     )
@@ -95,21 +74,21 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
     }
 
     override suspend fun obtenerPendientes(): List<Incidencia> {
-        return mockData.filter { it.estado == EstadoIncidencia.PENDIENTE }
+        return mockData.filter { !it.sincronizado && !it.esBorrador }
     }
 
-    override suspend fun marcarComoEnviada(id: String): Result<Unit> {
+    override suspend fun marcarComoEnviada(id: String, estadoId: String): Result<Unit> {
         val index = mockData.indexOfFirst { it.id == id }
         if (index != -1) {
-            mockData[index] = mockData[index].copy(estado = EstadoIncidencia.NUEVA, sincronizado = true)
+            mockData[index] = mockData[index].copy(estadoId = estadoId, esBorrador = false, sincronizado = true)
             _incidencias.update { mockData.toList() }
             return Result.success(Unit)
         }
         return Result.failure(Exception("Incidencia no encontrada"))
     }
 
-    override suspend fun enviarAlServidor(incidencia: Incidencia): Result<Unit> {
-        return actualizarEstado(incidencia.id, EstadoIncidencia.NUEVA, null)
+    override suspend fun enviarAlServidor(incidencia: Incidencia, defaultEstadoId: String): Result<Unit> {
+        return actualizarEstado(incidencia.id, defaultEstadoId, esBorrador = false, null)
     }
 
     override suspend fun obtenerPorId(id: String): Incidencia? {
@@ -118,14 +97,16 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
 
     override suspend fun actualizarEstado(
         id: String,
-        estado: EstadoIncidencia,
+        estadoId: String,
+        esBorrador: Boolean,
         imagenResolucionPath: String?
     ): Result<Unit> {
         val index = mockData.indexOfFirst { it.id == id }
         if (index != -1) {
-            val syncStatus = (estado != EstadoIncidencia.BORRADOR && estado != EstadoIncidencia.PENDIENTE)
+            val syncStatus = !esBorrador
             mockData[index] = mockData[index].copy(
-                estado = estado,
+                estadoId = estadoId,
+                esBorrador = esBorrador,
                 imagenResolucionPath = imagenResolucionPath ?: mockData[index].imagenResolucionPath,
                 sincronizado = syncStatus
             )
