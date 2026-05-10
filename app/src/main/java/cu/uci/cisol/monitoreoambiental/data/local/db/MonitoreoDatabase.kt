@@ -4,18 +4,21 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import cu.uci.cisol.monitoreoambiental.data.local.entity.IncidenciaEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.UsuarioEntity
+import cu.uci.cisol.monitoreoambiental.data.local.entity.TematicaEntity
 import androidx.room.TypeConverters
 
 @TypeConverters(Converters::class)
 @Database(
     entities = [
         UsuarioEntity::class,
-        IncidenciaEntity::class
+        IncidenciaEntity::class,
+        TematicaEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 abstract class MonitoreoDatabase : RoomDatabase() {
     abstract val usuarioDao: UsuarioDao
     abstract val incidenciaDao: IncidenciaDao
+    abstract val tematicaDao: TematicaDao
 }

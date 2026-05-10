@@ -8,6 +8,7 @@ import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
+import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +23,8 @@ enum class FormMode { CREAR, EDITAR }
 
 data class NuevaIncidenciaState(
     val incidenciaId: String = "",
-    val tematica: Tematica? = null,
+    val tematicaId: String? = null,
+    val tematicas: List<Tematica> = emptyList(),
     val descripcion: String = "",
     val imagenesUris: List<Uri> = emptyList(),
     val latitud: Double? = null,
@@ -34,10 +36,14 @@ data class NuevaIncidenciaState(
     val isLoading: Boolean = false,
     val showMapDialog: Boolean = false,
     val error: String? = null
-)
+) {
+    /** Convenience to get the currently selected Tematica object from the list. */
+    val selectedTematica: Tematica?
+        get() = tematicas.firstOrNull { it.id == tematicaId }
+}
 
 sealed interface NuevaIncidenciaAction {
-    data class OnTematicaChange(val tematica: Tematica) : NuevaIncidenciaAction
+    data class OnTematicaChange(val tematicaId: String) : NuevaIncidenciaAction
     data class OnDescripcionChange(val descripcion: String) : NuevaIncidenciaAction
     data class OnFotoTomada(val uri: Uri?) : NuevaIncidenciaAction
     data class OnFotoSeleccionada(val uris: List<Uri>) : NuevaIncidenciaAction
@@ -61,7 +67,8 @@ sealed interface NuevaIncidenciaEvent {
 
 class NuevaIncidenciaViewModel(
     savedStateHandle: SavedStateHandle,
-    private val incidenciaRepository: IncidenciaRepository
+    private val incidenciaRepository: IncidenciaRepository,
+    private val tematicaRepository: TematicaRepository
 ) : ViewModel() {
 
     private val incidenciaIdArg: String? = savedStateHandle["incidenciaId"]
@@ -73,6 +80,8 @@ class NuevaIncidenciaViewModel(
     val events = _events.receiveAsFlow()
 
     init {
+        observeTematicas()
+
         if (!incidenciaIdArg.isNullOrEmpty() && incidenciaIdArg != "{incidenciaId}") {
             cargarIncidencia(incidenciaIdArg)
         } else {
@@ -85,6 +94,14 @@ class NuevaIncidenciaViewModel(
         }
     }
 
+    private fun observeTematicas() {
+        viewModelScope.launch {
+            tematicaRepository.observeTematicas().collect { tematicas ->
+                _state.update { it.copy(tematicas = tematicas) }
+            }
+        }
+    }
+
     private fun cargarIncidencia(id: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
@@ -93,7 +110,7 @@ class NuevaIncidenciaViewModel(
                 _state.update {
                     it.copy(
                         incidenciaId = incidencia.id,
-                        tematica = incidencia.tematica,
+                        tematicaId = incidencia.tematicaId,
                         descripcion = incidencia.descripcion,
                         imagenesUris = incidencia.imagenesPaths.map { Uri.parse(it) },
                         imagenResolucionUri = incidencia.imagenResolucionPath?.let { path -> Uri.parse(path) },
@@ -115,7 +132,7 @@ class NuevaIncidenciaViewModel(
     fun onAction(action: NuevaIncidenciaAction) {
         when (action) {
             is NuevaIncidenciaAction.OnTematicaChange -> {
-                _state.update { it.copy(tematica = action.tematica) }
+                _state.update { it.copy(tematicaId = action.tematicaId) }
             }
             is NuevaIncidenciaAction.OnDescripcionChange -> {
                 _state.update { it.copy(descripcion = action.descripcion) }
@@ -188,7 +205,7 @@ class NuevaIncidenciaViewModel(
 
     private fun guardar(estadoFinal: EstadoIncidencia) {
         val currentState = _state.value
-        if (currentState.tematica == null || currentState.descripcion.isBlank()) {
+        if (currentState.tematicaId == null || currentState.descripcion.isBlank()) {
             viewModelScope.launch {
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Por favor complete temática y descripción"))
             }
@@ -200,7 +217,7 @@ class NuevaIncidenciaViewModel(
 
             val incidencia = Incidencia(
                 id = currentState.incidenciaId,
-                tematica = currentState.tematica,
+                tematicaId = currentState.tematicaId,
                 descripcion = currentState.descripcion,
                 imagenesPaths = currentState.imagenesUris.map { it.toString() },
                 imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
@@ -248,3 +265,4 @@ class NuevaIncidenciaViewModel(
         }
     }
 }
+

@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
-import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
+
 import cu.uci.cisol.monitoreoambiental.ui.theme.*
 import org.koin.androidx.compose.koinViewModel
 import java.io.File
@@ -310,7 +310,7 @@ fun NuevaIncidenciaScreen(
                     onExpandedChange = { expanded = it }
                 ) {
                     OutlinedTextField(
-                        value = state.tematica?.label ?: "Seleccionar Temática",
+                        value = state.selectedTematica?.name ?: "Seleccionar Temática",
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -325,11 +325,11 @@ fun NuevaIncidenciaScreen(
                         expanded = expanded,
                         onDismissRequest = { expanded = false }
                     ) {
-                        Tematica.entries.forEach { tematica ->
+                        state.tematicas.forEach { tematica ->
                             DropdownMenuItem(
-                                text = { Text(tematica.label) },
+                                text = { Text(tematica.name) },
                                 onClick = {
-                                    onAction(NuevaIncidenciaAction.OnTematicaChange(tematica))
+                                    onAction(NuevaIncidenciaAction.OnTematicaChange(tematica.id))
                                     expanded = false
                                 }
                             )

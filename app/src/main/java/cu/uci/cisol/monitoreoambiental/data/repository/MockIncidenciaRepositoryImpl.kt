@@ -2,7 +2,6 @@ package cu.uci.cisol.monitoreoambiental.data.repository
 
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
-import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +17,7 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
     private val mockData = mutableListOf(
         Incidencia(
             id = UUID.randomUUID().toString(),
-            tematica = Tematica.DESECHOS_SOLIDOS,
+            tematicaId = "mock-desechos-solidos",
             descripcion = "Se ha detectado un vertedero de basura ilegal cerca del parque central.",
             imagenesPaths = emptyList(),
             imagenResolucionPath = null,
@@ -30,7 +29,7 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
         ),
         Incidencia(
             id = UUID.randomUUID().toString(),
-            tematica = Tematica.FOCOS_CONTAMINANTES,
+            tematicaId = "mock-focos-contaminantes",
             descripcion = "Humo denso proveniente de una fábrica a las afueras de la ciudad, olor fuerte.",
             imagenesPaths = emptyList(),
             imagenResolucionPath = null,
@@ -42,7 +41,7 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
         ),
         Incidencia(
             id = UUID.randomUUID().toString(),
-            tematica = Tematica.ARBOLES,
+            tematicaId = "mock-arboles",
             descripcion = "Tala indiscriminada de árboles en la zona forestal norte, sin permiso aparente.",
             imagenesPaths = emptyList(),
             imagenResolucionPath = null,
@@ -54,7 +53,7 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
         ),
         Incidencia(
             id = UUID.randomUUID().toString(),
-            tematica = Tematica.SALIDEROS_AGUA,
+            tematicaId = "mock-salideros-agua",
             descripcion = "Salidero de agua potable continuo desde hace 3 días en la avenida principal.",
             imagenesPaths = emptyList(),
             imagenResolucionPath = null,
@@ -66,7 +65,7 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
         ),
         Incidencia(
             id = UUID.randomUUID().toString(),
-            tematica = Tematica.ORDEN_PUBLICO,
+            tematicaId = "mock-orden-publico",
             descripcion = "Ruidos molestos a altas horas de la noche por centro recreativo cercano.",
             imagenesPaths = emptyList(),
             imagenResolucionPath = null,
@@ -136,3 +135,4 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
         return Result.failure(Exception("Incidencia no encontrada"))
     }
 }
+

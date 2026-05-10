@@ -4,7 +4,6 @@ import cu.uci.cisol.monitoreoambiental.data.local.db.IncidenciaDao
 import cu.uci.cisol.monitoreoambiental.data.local.entity.IncidenciaEntity
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
-import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -68,7 +67,7 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
     private fun Incidencia.toEntity() =
             IncidenciaEntity(
                     id = id,
-                    tematica = tematica.name,
+                    tematica = tematicaId,
                     descripcion = descripcion,
                     imagenesPaths = imagenesPaths,
                     imagenResolucionPath = imagenResolucionPath,
@@ -82,7 +81,7 @@ class IncidenciaRepositoryImpl(private val incidenciaDao: IncidenciaDao) : Incid
     private fun IncidenciaEntity.toDomain() =
             Incidencia(
                     id = id,
-                    tematica = enumValueOf<Tematica>(tematica),
+                    tematicaId = tematica,
                     descripcion = descripcion,
                     imagenesPaths = imagenesPaths,
                     imagenResolucionPath = imagenResolucionPath,

@@ -7,6 +7,7 @@ import cu.uci.cisol.monitoreoambiental.domain.model.AuthCredentials
 import cu.uci.cisol.monitoreoambiental.domain.model.RegistrationRequest
 import cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository
+import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
 import cu.uci.cisol.monitoreoambiental.domain.util.AuthError
 import cu.uci.cisol.monitoreoambiental.domain.util.Result
 import cu.uci.cisol.monitoreoambiental.ui.util.UiText
@@ -22,7 +23,8 @@ import kotlinx.coroutines.launch
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val tematicaRepository: TematicaRepository
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthState())
@@ -81,6 +83,8 @@ class AuthViewModel(
             
             when (result) {
                 is Result.Success -> {
+                    // Sync tematicas immediately after login
+                    tematicaRepository.syncTematicas()
                     _events.send(AuthEvent.LoginSuccess)
                 }
                 is Result.Error -> {

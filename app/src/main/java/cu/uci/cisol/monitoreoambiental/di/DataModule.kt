@@ -22,6 +22,7 @@ val dataModule = module {
 
     single { get<MonitoreoDatabase>().usuarioDao }
     single { get<MonitoreoDatabase>().incidenciaDao }
+    single { get<MonitoreoDatabase>().tematicaDao }
 
     single<cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository> {
         cu.uci.cisol.monitoreoambiental.data.local.DataStoreSessionManager(androidContext())
@@ -29,6 +30,9 @@ val dataModule = module {
 
     single<cu.uci.cisol.monitoreoambiental.domain.repository.UsuarioRepository> {
         UsuarioRepositoryImpl(get())
+    }
+    single<cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository> {
+        cu.uci.cisol.monitoreoambiental.data.repository.OfflineFirstTematicaRepository(get(), get())
     }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository> {
         if (cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {

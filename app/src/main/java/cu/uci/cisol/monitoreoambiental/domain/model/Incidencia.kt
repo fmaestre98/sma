@@ -2,7 +2,7 @@ package cu.uci.cisol.monitoreoambiental.domain.model
 
 data class Incidencia(
     val id: String,
-    val tematica: Tematica,
+    val tematicaId: String,
     val descripcion: String,
     /** Rutas de las fotos principales de la incidencia (máx. 5). */
     val imagenesPaths: List<String> = emptyList(),

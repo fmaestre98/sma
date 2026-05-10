@@ -88,13 +88,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Herramienta para realizar el monitoreo en tiempo real de indicadores medioambientales claves",
-            fontSize = 14.sp,
-            textAlign = TextAlign.Center,
-            color = Color(0xFF666666),
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
 
         Spacer(modifier = Modifier.height(32.dp))
 
@@ -158,13 +151,6 @@ fun LoginScreen(
         }
 
         Spacer(modifier = Modifier.weight(1f))
-
-        Text(
-            text = "El usuario al pulsar en \"Entrar\" se encuentra\naceptando además los Terminos Condiciones y\nPoliticas de la Institucion.",
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center,
-            color = Color(0xFF666666)
-        )
     }
 }
 

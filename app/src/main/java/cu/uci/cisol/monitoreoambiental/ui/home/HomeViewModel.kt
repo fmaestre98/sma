@@ -6,6 +6,8 @@ import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
+import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
+import cu.uci.cisol.monitoreoambiental.domain.util.Result
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,18 +34,21 @@ data class HomeUiState(
     val datosMensuales: List<MonthlyData> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val logoutCompleted: Boolean = false
+    val logoutCompleted: Boolean = false,
+    val tematicaSyncError: String? = null
 )
 
 class HomeViewModel(
     private val repository: IncidenciaRepository,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val tematicaRepository: TematicaRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        syncTematicas()
         cargarDatos()
     }
 
@@ -51,6 +56,28 @@ class HomeViewModel(
         viewModelScope.launch {
             authRepository.logout()
             _uiState.value = _uiState.value.copy(logoutCompleted = true)
+        }
+    }
+
+    private fun syncTematicas() {
+        viewModelScope.launch {
+            when (val result = tematicaRepository.syncTematicas()) {
+                is Result.Success -> {
+                    _uiState.value = _uiState.value.copy(tematicaSyncError = null)
+                }
+                is Result.Error -> {
+                    // Check if there's cached data
+                    tematicaRepository.observeTematicas().collect { tematicas ->
+                        if (tematicas.isEmpty()) {
+                            _uiState.value = _uiState.value.copy(
+                                tematicaSyncError = "Error al sincronizar temáticas. Verifique su conexión."
+                            )
+                        }
+                        // Only collect the first emission to check cache status
+                        return@collect
+                    }
+                }
+            }
         }
     }
 

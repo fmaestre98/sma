@@ -5,11 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
+import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
+import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -45,7 +48,8 @@ sealed interface MisIncidenciasAction {
 
 class MisIncidenciasViewModel(
     savedStateHandle: SavedStateHandle,
-    private val incidenciaRepository: IncidenciaRepository
+    private val incidenciaRepository: IncidenciaRepository,
+    private val tematicaRepository: TematicaRepository
 ) : ViewModel() {
 
     private val filtroArg = savedStateHandle.get<String>("filtro")
@@ -68,12 +72,15 @@ class MisIncidenciasViewModel(
         _state.update { it.copy(filtro = initialFilter) }
 
         viewModelScope.launch {
-            incidenciaRepository.observarTodas()
+            combine(
+                incidenciaRepository.observarTodas(),
+                tematicaRepository.observeTematicas()
+            ) { incidencias, tematicas ->
+                val tematicaMap = tematicas.associateBy { it.id }
+                incidencias.map { it.toUi(tematicaMap) }
+            }
                 .catch { e ->
                     _state.update { it.copy(isLoading = false, error = e.message) }
-                }
-                .map { lista ->
-                    lista.map { it.toUi() }
                 }
                 .collect { listaUi ->
                     todasIncidencias = listaUi
@@ -109,11 +116,11 @@ class MisIncidenciasViewModel(
         }
     }
 
-    private fun Incidencia.toUi(): IncidenciaUi {
+    private fun Incidencia.toUi(tematicaMap: Map<String, Tematica>): IncidenciaUi {
         val date = Date(fechaHora)
         return IncidenciaUi(
             id = id,
-            tematica = tematica.label,
+            tematica = tematicaMap[tematicaId]?.name ?: tematicaId,
             descripcionCorta = if (descripcion.length > 80) "${descripcion.take(80)}..." else descripcion,
             estado = estado,
             horaFormateada = timeFormatter.format(date),
@@ -125,3 +132,4 @@ class MisIncidenciasViewModel(
         return dateFormatter.format(Date(fechaAbsoluta))
     }
 }
+

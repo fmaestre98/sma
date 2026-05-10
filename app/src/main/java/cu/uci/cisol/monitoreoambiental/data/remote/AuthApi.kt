@@ -14,7 +14,7 @@ class AuthApi(private val client: HttpClient) {
 
     // You should put the actual base url here, or use it from config
     companion object {
-        const val BASE_URL = "http://10.0.2.2:8000/auth"
+        const val BASE_URL = "http://192.168.1.100:8000/auth"
     }
 
     suspend fun login(request: LoginRequestDto): io.ktor.client.statement.HttpResponse {
