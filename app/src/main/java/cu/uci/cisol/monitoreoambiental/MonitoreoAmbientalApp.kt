@@ -2,7 +2,6 @@ package cu.uci.cisol.monitoreoambiental
 
 import android.app.Application
 import cu.uci.cisol.monitoreoambiental.di.dataModule
-import cu.uci.cisol.monitoreoambiental.di.domainModule
 import cu.uci.cisol.monitoreoambiental.di.networkModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -18,7 +17,6 @@ class MonitoreoAmbientalApp : Application() {
             androidContext(this@MonitoreoAmbientalApp)
             modules(
                     dataModule,
-                    domainModule,
                     networkModule,
                     cu.uci.cisol.monitoreoambiental.di.uiModule
             )

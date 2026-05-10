@@ -14,6 +14,14 @@ import io.ktor.client.plugins.logging.SIMPLE
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.http.contentType
+import io.ktor.http.ContentType
+import io.ktor.client.call.body
+import io.ktor.client.plugins.HttpSend
+import io.ktor.client.plugins.plugin
+import io.ktor.http.encodedPath
 import org.koin.dsl.module
 
 val networkModule = module {
@@ -37,13 +45,72 @@ val networkModule = module {
                 bearer {
                     loadTokens {
                         runBlocking {
-                            val token = sessionRepository.getToken()
-                            if (token != null) {
-                                BearerTokens(token, token)
+                            val access = sessionRepository.getAccessToken()
+                            val refresh = sessionRepository.getRefreshToken()
+                            if (access != null && refresh != null) {
+                                BearerTokens(access, refresh)
                             } else null
                         }
                     }
+                    refreshTokens {
+                        val refresh = sessionRepository.getRefreshToken() ?: return@refreshTokens null
+                        try {
+                            val client = io.ktor.client.HttpClient(Android) {
+                                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+                            }
+                            val response = client.post("https://api.test-monitoreo.com/auth/token/refresh/") {
+                                contentType(ContentType.Application.Json)
+                                setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
+                            }
+                            if (response.status.value in 200..299) {
+                                val tokenResponse = response.body<cu.uci.cisol.monitoreoambiental.data.remote.dto.TokenResponseDto>()
+                                sessionRepository.saveTokens(tokenResponse.access, tokenResponse.refresh)
+                                BearerTokens(tokenResponse.access, tokenResponse.refresh)
+                            } else {
+                                sessionRepository.clearSession()
+                                null
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    sendWithoutRequest { request ->
+                        !request.url.encodedPath.contains("/auth/")
+                    }
                 }
+            }
+        }.apply {
+            plugin(io.ktor.client.plugins.HttpSend).intercept { request ->
+                if (!request.url.encodedPath.contains("/auth/")) {
+                    val access = sessionRepository.getAccessToken()
+                    if (cu.uci.cisol.monitoreoambiental.data.util.JwtUtils.isTokenExpired(access)) {
+                        // Trigger a 401 manually or perform the refresh here.
+                        // Actually, Ktor's HttpSend can just do the refresh request directly.
+                        val refresh = sessionRepository.getRefreshToken()
+                        if (refresh != null) {
+                            try {
+                                val refreshClient = io.ktor.client.HttpClient(Android) {
+                                    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+                                }
+                                val res = refreshClient.post("https://api.test-monitoreo.com/auth/token/refresh/") {
+                                    contentType(ContentType.Application.Json)
+                                    setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
+                                }
+                                if (res.status.value in 200..299) {
+                                    val tokenResponse = res.body<cu.uci.cisol.monitoreoambiental.data.remote.dto.TokenResponseDto>()
+                                    sessionRepository.saveTokens(tokenResponse.access, tokenResponse.refresh)
+                                    request.headers.remove(io.ktor.http.HttpHeaders.Authorization)
+                                    request.headers.append(io.ktor.http.HttpHeaders.Authorization, "Bearer ${tokenResponse.access}")
+                                } else {
+                                    sessionRepository.clearSession()
+                                }
+                            } catch (e: Exception) {
+                                // Ignore, let the original request proceed and fail
+                            }
+                        }
+                    }
+                }
+                this.execute(request)
             }
         }
     }

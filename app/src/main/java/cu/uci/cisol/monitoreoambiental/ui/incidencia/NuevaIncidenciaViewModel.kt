@@ -8,8 +8,6 @@ import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
-import cu.uci.cisol.monitoreoambiental.domain.usecase.ActualizarEstadoIncidenciaUseCase
-import cu.uci.cisol.monitoreoambiental.domain.usecase.GuardarIncidenciaUseCase
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +24,7 @@ data class NuevaIncidenciaState(
     val incidenciaId: String = "",
     val tematica: Tematica? = null,
     val descripcion: String = "",
-    val imagenUri: Uri? = null,
+    val imagenesUris: List<Uri> = emptyList(),
     val latitud: Double? = null,
     val longitud: Double? = null,
     val obteniendoCoordenadas: Boolean = false,
@@ -42,6 +40,8 @@ sealed interface NuevaIncidenciaAction {
     data class OnTematicaChange(val tematica: Tematica) : NuevaIncidenciaAction
     data class OnDescripcionChange(val descripcion: String) : NuevaIncidenciaAction
     data class OnFotoTomada(val uri: Uri?) : NuevaIncidenciaAction
+    data class OnFotoSeleccionada(val uris: List<Uri>) : NuevaIncidenciaAction
+    data class OnFotoEliminada(val uri: Uri) : NuevaIncidenciaAction
     data class OnFotoResolucionTomada(val uri: Uri?) : NuevaIncidenciaAction
     object OnObtenerCoordenadas : NuevaIncidenciaAction
     data class OnCoordenadasObtenidas(val lat: Double, val lng: Double) : NuevaIncidenciaAction
@@ -61,8 +61,6 @@ sealed interface NuevaIncidenciaEvent {
 
 class NuevaIncidenciaViewModel(
     savedStateHandle: SavedStateHandle,
-    private val guardarIncidenciaUseCase: GuardarIncidenciaUseCase,
-    private val actualizarEstadoUseCase: ActualizarEstadoIncidenciaUseCase,
     private val incidenciaRepository: IncidenciaRepository
 ) : ViewModel() {
 
@@ -97,7 +95,7 @@ class NuevaIncidenciaViewModel(
                         incidenciaId = incidencia.id,
                         tematica = incidencia.tematica,
                         descripcion = incidencia.descripcion,
-                        imagenUri = incidencia.imagenPath?.let { path -> Uri.parse(path) },
+                        imagenesUris = incidencia.imagenesPaths.map { Uri.parse(it) },
                         imagenResolucionUri = incidencia.imagenResolucionPath?.let { path -> Uri.parse(path) },
                         latitud = incidencia.latitud,
                         longitud = incidencia.longitud,
@@ -123,9 +121,20 @@ class NuevaIncidenciaViewModel(
                 _state.update { it.copy(descripcion = action.descripcion) }
             }
             is NuevaIncidenciaAction.OnFotoTomada -> {
-                if (action.uri != null) {
-                    _state.update { it.copy(imagenUri = action.uri) }
+                if (action.uri != null && _state.value.imagenesUris.size < 5) {
+                    _state.update { it.copy(imagenesUris = it.imagenesUris + action.uri) }
                 }
+            }
+            is NuevaIncidenciaAction.OnFotoSeleccionada -> {
+                val current = _state.value.imagenesUris
+                val availableSpace = 5 - current.size
+                if (availableSpace > 0) {
+                    val newUris = action.uris.take(availableSpace)
+                    _state.update { it.copy(imagenesUris = current + newUris) }
+                }
+            }
+            is NuevaIncidenciaAction.OnFotoEliminada -> {
+                _state.update { it.copy(imagenesUris = it.imagenesUris - action.uri) }
             }
             is NuevaIncidenciaAction.OnFotoResolucionTomada -> {
                 if (action.uri != null) {
@@ -193,7 +202,7 @@ class NuevaIncidenciaViewModel(
                 id = currentState.incidenciaId,
                 tematica = currentState.tematica,
                 descripcion = currentState.descripcion,
-                imagenPath = currentState.imagenUri?.toString(),
+                imagenesPaths = currentState.imagenesUris.map { it.toString() },
                 imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
                 latitud = currentState.latitud,
                 longitud = currentState.longitud,
@@ -202,7 +211,7 @@ class NuevaIncidenciaViewModel(
                 sincronizado = false // By default is false when saving via the form
             )
 
-            val result = guardarIncidenciaUseCase(incidencia)
+            val result = incidenciaRepository.guardar(incidencia)
             if (result.isSuccess) {
                 if (estadoFinal == EstadoIncidencia.NUEVA && cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {
                     delay(1000) // mock delay
@@ -223,7 +232,7 @@ class NuevaIncidenciaViewModel(
         // Al marcar como resuelta, primero cambiamos el estado y actualizamos DB
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            val result = actualizarEstadoUseCase(
+            val result = incidenciaRepository.actualizarEstado(
                 id = currentState.incidenciaId,
                 estado = EstadoIncidencia.RESUELTA,
                 imagenResolucionPath = currentState.imagenResolucionUri?.toString()

@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
-import cu.uci.cisol.monitoreoambiental.domain.usecase.ObtenerIncidenciasUseCase
+import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -45,7 +45,7 @@ sealed interface MisIncidenciasAction {
 
 class MisIncidenciasViewModel(
     savedStateHandle: SavedStateHandle,
-    private val obtenerIncidenciasUseCase: ObtenerIncidenciasUseCase
+    private val incidenciaRepository: IncidenciaRepository
 ) : ViewModel() {
 
     private val filtroArg = savedStateHandle.get<String>("filtro")
@@ -68,7 +68,7 @@ class MisIncidenciasViewModel(
         _state.update { it.copy(filtro = initialFilter) }
 
         viewModelScope.launch {
-            obtenerIncidenciasUseCase()
+            incidenciaRepository.observarTodas()
                 .catch { e ->
                     _state.update { it.copy(isLoading = false, error = e.message) }
                 }

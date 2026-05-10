@@ -18,6 +18,7 @@ import cu.uci.cisol.monitoreoambiental.ui.home.HomeScreen
 import cu.uci.cisol.monitoreoambiental.ui.home.HomeViewModel
 import cu.uci.cisol.monitoreoambiental.ui.theme.MonitoreoAmbientalTheme
 import org.koin.androidx.compose.koinViewModel
+import androidx.compose.foundation.layout.padding
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,34 +30,44 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val authViewModel: AuthViewModel = koinViewModel()
                 val isSessionActive by authViewModel.isSessionActive.collectAsState(initial = null)
+                val snackbarHostState = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
 
                 splashScreen.setKeepOnScreenCondition { isSessionActive == null }
 
                 if (isSessionActive != null) {
                     val startDestination = if (isSessionActive == true) "home" else "login"
 
-                    NavHost(navController = navController, startDestination = startDestination) {
-                        composable("login") {
-                            LoginScreen(
-                                viewModel = authViewModel,
-                                onNavigateToRegister = { navController.navigate("register") },
-                                onNavigateToHome = {
-                                    navController.navigate("home") {
-                                        popUpTo("login") { inclusive = true }
-                                    }
-                                }
-                            )
-                        }
-                        composable("register") {
-                            RegisterScreen(
-                                viewModel = authViewModel,
-                                onNavigateToLogin = {
-                                    navController.navigate("login") {
-                                        popUpTo("register") { inclusive = true }
-                                    }
-                                }
-                            )
-                        }
+                    androidx.compose.material3.Scaffold(
+                        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) }
+                    ) { padding ->
+                        NavHost(
+                            navController = navController, 
+                            startDestination = startDestination,
+                            modifier = androidx.compose.ui.Modifier.padding(padding)
+                        ) {
+                            composable("login") {
+                                LoginScreen(
+                                    viewModel = authViewModel,
+                                    onNavigateToRegister = { navController.navigate("register") },
+                                    onNavigateToHome = {
+                                        navController.navigate("home") {
+                                            popUpTo("login") { inclusive = true }
+                                        }
+                                    },
+                                    snackbarHostState = snackbarHostState
+                                )
+                            }
+                            composable("register") {
+                                RegisterScreen(
+                                    viewModel = authViewModel,
+                                    onNavigateToLogin = {
+                                        navController.navigate("login") {
+                                            popUpTo("register") { inclusive = true }
+                                        }
+                                    },
+                                    snackbarHostState = snackbarHostState
+                                )
+                            }
                         composable("home") {
                             val homeViewModel: HomeViewModel = koinViewModel()
                             val homeUiState by homeViewModel.uiState.collectAsState()
@@ -114,6 +125,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                }
                 }
             }
         }

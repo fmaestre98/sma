@@ -16,21 +16,35 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 class DataStoreSessionManager(private val context: Context) : SessionRepository {
 
     companion object {
-        private val JWT_TOKEN_KEY = stringPreferencesKey("jwt_token")
+        private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
+        private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
     }
 
-    override val tokenFlow: Flow<String?> =
-            context.dataStore.data.map { preferences -> preferences[JWT_TOKEN_KEY] }
+    override val accessTokenFlow: Flow<String?> =
+            context.dataStore.data.map { preferences -> preferences[ACCESS_TOKEN_KEY] }
+            
+    override val refreshTokenFlow: Flow<String?> =
+            context.dataStore.data.map { preferences -> preferences[REFRESH_TOKEN_KEY] }
 
-    override suspend fun saveToken(token: String) {
-        context.dataStore.edit { preferences -> preferences[JWT_TOKEN_KEY] = token }
+    override suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        context.dataStore.edit { preferences -> 
+            preferences[ACCESS_TOKEN_KEY] = accessToken
+            preferences[REFRESH_TOKEN_KEY] = refreshToken
+        }
     }
 
     override suspend fun clearSession() {
-        context.dataStore.edit { preferences -> preferences.remove(JWT_TOKEN_KEY) }
+        context.dataStore.edit { preferences -> 
+            preferences.remove(ACCESS_TOKEN_KEY)
+            preferences.remove(REFRESH_TOKEN_KEY)
+        }
     }
 
-    override suspend fun getToken(): String? {
-        return tokenFlow.first()
+    override suspend fun getAccessToken(): String? {
+        return accessTokenFlow.first()
+    }
+    
+    override suspend fun getRefreshToken(): String? {
+        return refreshTokenFlow.first()
     }
 }

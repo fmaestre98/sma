@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Monitoreo Ambiental</string>
+    <string name="error_no_internet">No hay conexión a internet.</string>
+    <string name="error_server">Error en el servidor.</string>
+    <string name="error_unauthorized">Sesión expirada o no autorizada.</string>
+    <string name="error_unknown">Ha ocurrido un error desconocido.</string>
+    <string name="error_invalid_credentials">Credenciales inválidas.</string>
+    <string name="error_multiple_sessions">Tiene varias sesiones activas y debe seleccionar una sola para desconectar.</string>
+    <string name="success_logout">Sesiones desconectadas correctamente. Por favor, inicie sesión nuevamente.</string>
+    <string name="success_register">Registro exitoso. Los administradores revisarán su solicitud.</string>
 </resources>

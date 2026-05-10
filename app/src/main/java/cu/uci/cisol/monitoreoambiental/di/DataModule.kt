@@ -41,7 +41,7 @@ val dataModule = module {
         if (cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_AUTH) {
             cu.uci.cisol.monitoreoambiental.data.repository.MockAuthRepositoryImpl()
         } else {
-            cu.uci.cisol.monitoreoambiental.data.repository.AuthRepositoryImpl(get())
+            cu.uci.cisol.monitoreoambiental.data.repository.AuthRepositoryImpl(get(), get())
         }
     }
 }

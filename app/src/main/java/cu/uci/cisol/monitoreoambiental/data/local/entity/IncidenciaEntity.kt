@@ -8,7 +8,7 @@ data class IncidenciaEntity(
     @PrimaryKey val id: String,
     val tematica: String,
     val descripcion: String,
-    val imagenPath: String?,
+    val imagenesPaths: List<String> = emptyList(),
     /** Foto de resolución, se rellena al marcar como RESUELTA. */
     val imagenResolucionPath: String?,
     val latitud: Double?,

@@ -4,8 +4,8 @@ data class Incidencia(
     val id: String,
     val tematica: Tematica,
     val descripcion: String,
-    /** Ruta de la foto principal de la incidencia. */
-    val imagenPath: String?,
+    /** Rutas de las fotos principales de la incidencia (máx. 5). */
+    val imagenesPaths: List<String> = emptyList(),
     /** Ruta de la foto de resolución (se agrega al marcar como RESUELTA). */
     val imagenResolucionPath: String?,
     val latitud: Double?,

@@ -16,6 +16,11 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,6 +116,14 @@ fun NuevaIncidenciaScreen(
             }
         }
     )
+
+    val pickMultipleMedia = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            onAction(NuevaIncidenciaAction.OnFotoSeleccionada(uris))
+        }
+    }
 
     var resolutionPhotoUri by remember { mutableStateOf<Uri?>(null) }
     val takeResolutionPictureLauncher = rememberLauncherForActivityResult(
@@ -348,35 +361,72 @@ fun NuevaIncidenciaScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Foto button and preview
-                if (state.imagenUri != null) {
-                    AsyncImage(
-                        model = state.imagenUri,
-                        contentDescription = "Foto de incidencia",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(8.dp)),
-                        contentScale = ContentScale.Crop
-                    )
+                if (state.imagenesUris.isNotEmpty()) {
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(state.imagenesUris) { uri ->
+                            Box(modifier = Modifier.size(120.dp)) {
+                                AsyncImage(
+                                    model = uri,
+                                    contentDescription = "Foto seleccionada",
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                                IconButton(
+                                    onClick = { onAction(NuevaIncidenciaAction.OnFotoEliminada(uri)) },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(4.dp)
+                                        .size(24.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Descartar",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
-                Button(
-                    onClick = {
-                        if (cameraPermissionState.status.isGranted) {
-                            photoUri = createTempImageUri(context)
-                            takePictureLauncher.launch(photoUri!!)
-                        } else {
-                            cameraPermissionState.launchPermissionRequest()
+                if (state.imagenesUris.size < 5) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = {
+                                if (cameraPermissionState.status.isGranted) {
+                                    photoUri = createTempImageUri(context)
+                                    takePictureLauncher.launch(photoUri!!)
+                                } else {
+                                    cameraPermissionState.launchPermissionRequest()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = AzulSecundario)
+                        ) {
+                            Icon(imageVector = Icons.Default.PhotoCamera, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Cámara")
                         }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AzulSecundario)
-                ) {
-                    Icon(imageVector = Icons.Default.PhotoCamera, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(if (state.imagenUri == null) "Tomar Foto" else "Cambiar Foto")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                pickMultipleMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario)
+                        ) {
+                            Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Galería")
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))

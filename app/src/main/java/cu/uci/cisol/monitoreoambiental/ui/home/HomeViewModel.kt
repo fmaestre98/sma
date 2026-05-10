@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
+import cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
-import cu.uci.cisol.monitoreoambiental.domain.usecase.LogoutUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +37,7 @@ data class HomeUiState(
 
 class HomeViewModel(
     private val repository: IncidenciaRepository,
-    private val logoutUseCase: LogoutUseCase
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
@@ -49,7 +49,7 @@ class HomeViewModel(
 
     fun logout() {
         viewModelScope.launch {
-            logoutUseCase()
+            authRepository.logout()
             _uiState.value = _uiState.value.copy(logoutCompleted = true)
         }
     }

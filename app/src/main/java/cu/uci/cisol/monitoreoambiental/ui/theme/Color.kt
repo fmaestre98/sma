@@ -11,7 +11,7 @@ val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
 
 // Paleta principal de la app
-val AzulPrimario = Color(0xFF1A3A5C)
+val AzulPrimario = Color(0xFF123C78)
 val AzulSecundario = Color(0xFF1E5A8E)
 val AzulClaro = Color(0xFF2980B9)
 val AzulSurface = Color(0xFFF0F6FC)
