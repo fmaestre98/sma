@@ -133,8 +133,9 @@ fun HomeScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
+                        .padding(top = innerPadding.calculateTopPadding())
                         .verticalScroll(rememberScrollState())
+                        .padding(bottom = innerPadding.calculateBottomPadding())
                         .padding(16.dp)
                 ) {
                     // Tarjeta: Gráfico Donut

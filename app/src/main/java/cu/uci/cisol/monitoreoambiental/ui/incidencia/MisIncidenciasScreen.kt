@@ -117,7 +117,7 @@ fun MisIncidenciasScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
         ) {
             // Filter Chips
             Row(
@@ -159,7 +159,8 @@ fun MisIncidenciasScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = innerPadding.calculateBottomPadding())
                 ) {
                     state.incidenciasPorFecha.forEach { (fecha, incidencias) ->
                         item {

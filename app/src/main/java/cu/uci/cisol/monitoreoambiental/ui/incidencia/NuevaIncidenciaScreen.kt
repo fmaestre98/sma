@@ -243,6 +243,7 @@ fun NuevaIncidenciaScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -284,8 +285,10 @@ fun NuevaIncidenciaScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(top = innerPadding.calculateTopPadding())
+                    .consumeWindowInsets(innerPadding)
                     .verticalScroll(rememberScrollState())
+                    .padding(bottom = innerPadding.calculateBottomPadding())
                     .padding(16.dp)
             ) {
                 if (state.modo == FormMode.EDITAR) {
