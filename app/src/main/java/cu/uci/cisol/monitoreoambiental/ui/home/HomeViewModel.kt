@@ -16,12 +16,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
+import cu.uci.cisol.monitoreoambiental.domain.repository.LocalidadRepository
 
 // -----------------------
 // Configuración de datos de prueba
 // Cambia a false para cargar datos reales desde la base de datos local
 // -----------------------
-private const val USE_MOCK_DATA = true
+private const val USE_MOCK_DATA = false
 
 data class EstadoCount(val id: String, val nombre: String, val colorHex: String, val count: Int)
 
@@ -46,7 +47,8 @@ class HomeViewModel(
     private val repository: IncidenciaRepository,
     private val authRepository: AuthRepository,
     private val tematicaRepository: TematicaRepository,
-    private val estadoRepository: EstadoRepository
+    private val estadoRepository: EstadoRepository,
+    private val localidadRepository: LocalidadRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState(isLoading = true))
@@ -55,6 +57,7 @@ class HomeViewModel(
     init {
         syncTematicas()
         syncEstados()
+        syncLocalities()
         cargarDatos()
     }
 
@@ -89,6 +92,12 @@ class HomeViewModel(
     private fun syncEstados() {
         viewModelScope.launch {
             estadoRepository.syncEstados()
+        }
+    }
+
+    private fun syncLocalities() {
+        viewModelScope.launch {
+            localidadRepository.syncLocalities()
         }
     }
     private fun cargarDatos() {

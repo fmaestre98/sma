@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -28,32 +27,34 @@ data class IncidenciaUi(
     val estadoNombre: String,
     val estadoColorHex: String,
     val esBorrador: Boolean,
+    val sincronizado: Boolean,
     val horaFormateada: String,
-    val fechaAbsoluta: Long // For sorting
+    val fechaAbsoluta: Long,
 )
 
 enum class IncidenciaFiltro(val label: String) {
     TODAS("Todas"),
     BORRADORES("Borradores"),
-    ENVIADAS("Enviadas")
+    ENVIADAS("Enviadas"),
 }
 
 data class MisIncidenciasState(
     val incidenciasPorFecha: Map<String, List<IncidenciaUi>> = emptyMap(),
     val filtro: IncidenciaFiltro = IncidenciaFiltro.TODAS,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )
 
 sealed interface MisIncidenciasAction {
     data class OnFiltroChange(val filtro: IncidenciaFiltro) : MisIncidenciasAction
+    object OnRefresh : MisIncidenciasAction
 }
 
 class MisIncidenciasViewModel(
     savedStateHandle: SavedStateHandle,
     private val incidenciaRepository: IncidenciaRepository,
     private val tematicaRepository: TematicaRepository,
-    private val estadoRepository: EstadoRepository
+    private val estadoRepository: EstadoRepository,
 ) : ViewModel() {
 
     private val filtroArg = savedStateHandle.get<String>("filtro")
@@ -67,19 +68,22 @@ class MisIncidenciasViewModel(
     private val timeFormatter = SimpleDateFormat("hh:mm a", Locale("es", "ES"))
 
     init {
-        val initialFilter = try {
-            if (filtroArg != null) IncidenciaFiltro.valueOf(filtroArg) else IncidenciaFiltro.TODAS
-        } catch (e: Exception) {
-            IncidenciaFiltro.TODAS
-        }
-        
+        val initialFilter =
+            try {
+                if (filtroArg != null) IncidenciaFiltro.valueOf(filtroArg) else IncidenciaFiltro.TODAS
+            } catch (_: Exception) {
+                IncidenciaFiltro.TODAS
+            }
+
         _state.update { it.copy(filtro = initialFilter) }
+
+        syncFromServer()
 
         viewModelScope.launch {
             combine(
                 incidenciaRepository.observarTodas(),
                 tematicaRepository.observeTematicas(),
-                estadoRepository.observeEstados()
+                estadoRepository.observeEstados(),
             ) { incidencias, tematicas, estados ->
                 val tematicaMap = tematicas.associateBy { it.id }
                 val estadoMap = estados.associateBy { it.id }
@@ -101,40 +105,63 @@ class MisIncidenciasViewModel(
                 _state.update { it.copy(filtro = action.filtro) }
                 aplicarFiltro()
             }
+            MisIncidenciasAction.OnRefresh -> syncFromServer()
+        }
+    }
+
+    private fun syncFromServer() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+            val result = incidenciaRepository.syncDesdeServidor()
+            if (result.isFailure) {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = result.exceptionOrNull()?.message ?: "Error al sincronizar",
+                    )
+                }
+            }
         }
     }
 
     private fun aplicarFiltro() {
         val filtroActual = _state.value.filtro
-        val filtradas = when (filtroActual) {
-            IncidenciaFiltro.TODAS -> todasIncidencias
-            IncidenciaFiltro.BORRADORES -> todasIncidencias.filter { it.esBorrador }
-            IncidenciaFiltro.ENVIADAS -> todasIncidencias.filter { !it.esBorrador }
-        }
+        val filtradas =
+            when (filtroActual) {
+                IncidenciaFiltro.TODAS -> todasIncidencias
+                IncidenciaFiltro.BORRADORES -> todasIncidencias.filter { it.esBorrador }
+                IncidenciaFiltro.ENVIADAS ->
+                    todasIncidencias.filter { !it.esBorrador && it.sincronizado }
+            }
 
         val agrupadas = filtradas.groupBy { it.getFechaFormateada() }
-        
-        _state.update { 
+
+        _state.update {
             it.copy(
                 incidenciasPorFecha = agrupadas,
-                isLoading = false
-            ) 
+                isLoading = false,
+            )
         }
     }
 
-    private fun Incidencia.toUi(tematicaMap: Map<String, Tematica>, estadoMap: Map<String, EstadoIncidencia>): IncidenciaUi {
+    private fun Incidencia.toUi(
+        tematicaMap: Map<String, Tematica>,
+        estadoMap: Map<String, EstadoIncidencia>,
+    ): IncidenciaUi {
         val date = Date(fechaHora)
         val estadoLocal = estadoMap[estadoId]
-        
+
         return IncidenciaUi(
             id = id,
             tematica = tematicaMap[tematicaId]?.name ?: tematicaId,
-            descripcionCorta = if (descripcion.length > 80) "${descripcion.take(80)}..." else descripcion,
-            estadoNombre = if (esBorrador) "Borrador" else estadoLocal?.name ?: "Desconocido",
+            descripcionCorta =
+                if (descripcion.length > 80) "${descripcion.take(80)}..." else descripcion,
+            estadoNombre = if (esBorrador) "Borrador" else estadoLocal?.name ?: estadoId,
             estadoColorHex = if (esBorrador) "#9E9E9E" else estadoLocal?.colorHex ?: "#9E9E9E",
             esBorrador = esBorrador,
+            sincronizado = sincronizado,
             horaFormateada = timeFormatter.format(date),
-            fechaAbsoluta = fechaHora
+            fechaAbsoluta = fechaHora,
         )
     }
 
@@ -142,4 +169,3 @@ class MisIncidenciasViewModel(
         return dateFormatter.format(Date(fechaAbsoluta))
     }
 }
-

@@ -342,6 +342,45 @@ fun NuevaIncidenciaScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Dropdown Localidad
+                var localidadExpanded by remember { mutableStateOf(false) }
+                ExposedDropdownMenuBox(
+                    expanded = localidadExpanded,
+                    onExpandedChange = { localidadExpanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = state.selectedLocalidad?.let { "${it.name} (${it.municipality})" }
+                            ?: "Seleccionar Localidad",
+                        onValueChange = {},
+                        readOnly = true,
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = localidadExpanded)
+                        },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = AzulPrimario,
+                        ),
+                        modifier = Modifier
+                            .menuAnchor()
+                            .fillMaxWidth(),
+                    )
+                    ExposedDropdownMenu(
+                        expanded = localidadExpanded,
+                        onDismissRequest = { localidadExpanded = false },
+                    ) {
+                        state.localidades.forEach { localidad ->
+                            DropdownMenuItem(
+                                text = { Text("${localidad.name} (${localidad.municipality})") },
+                                onClick = {
+                                    onAction(NuevaIncidenciaAction.OnLocalidadChange(localidad.id))
+                                    localidadExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Descripción
                 OutlinedTextField(
                     value = state.descripcion,

@@ -11,5 +11,5 @@ object AppConfig {
     /**
      * Flag to enable/disable mock delays or fake sync for Incidencias flows.
      */
-    const val USE_MOCK_INCIDENCIAS = true
+    const val USE_MOCK_INCIDENCIAS = false
 }

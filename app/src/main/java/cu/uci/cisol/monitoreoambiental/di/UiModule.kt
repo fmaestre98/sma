@@ -6,9 +6,9 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 val uiModule = module {
-    viewModel { AuthViewModel(get(), get(), get()) }
-    viewModel { HomeViewModel(get(), get(), get(), get()) }
-    viewModel { cu.uci.cisol.monitoreoambiental.ui.incidencia.NuevaIncidenciaViewModel(get(), get(), get(), get()) }
+    viewModel { AuthViewModel(get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get()) }
+    viewModel { cu.uci.cisol.monitoreoambiental.ui.incidencia.NuevaIncidenciaViewModel(get(), get(), get(), get(), get()) }
     viewModel { cu.uci.cisol.monitoreoambiental.ui.incidencia.MisIncidenciasViewModel(get(), get(), get(), get()) }
 }
 

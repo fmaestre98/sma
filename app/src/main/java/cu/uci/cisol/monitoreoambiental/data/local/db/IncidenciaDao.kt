@@ -1,6 +1,8 @@
 package cu.uci.cisol.monitoreoambiental.data.local.db
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Query
+import androidx.room.Upsert
 import cu.uci.cisol.monitoreoambiental.data.local.entity.IncidenciaEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -16,21 +18,44 @@ interface IncidenciaDao {
     @Query("SELECT * FROM incidencias WHERE id = :id")
     suspend fun obtenerPorId(id: String): IncidenciaEntity?
 
+    @Query("SELECT * FROM incidencias WHERE serverId = :serverId LIMIT 1")
+    suspend fun obtenerPorServerId(serverId: String): IncidenciaEntity?
+
     @Upsert
     suspend fun insertar(incidencia: IncidenciaEntity)
 
     @Query(
         """UPDATE incidencias
            SET estadoId = :estadoId,
+               esBorrador = :esBorrador,
                imagenResolucionPath = COALESCE(:imagenResolucionPath, imagenResolucionPath),
                sincronizado = :sincronizado
-           WHERE id = :id"""
+           WHERE id = :id""",
     )
     suspend fun actualizarEstado(
         id: String,
         estadoId: String,
+        esBorrador: Boolean,
         imagenResolucionPath: String?,
         sincronizado: Boolean,
+    )
+
+    @Query(
+        """UPDATE incidencias
+           SET serverId = :serverId,
+               sincronizado = :sincronizado,
+               esBorrador = :esBorrador,
+               estadoId = :estadoId,
+               ticketNumber = :ticketNumber
+           WHERE id = :id""",
+    )
+    suspend fun actualizarTrasEnvio(
+        id: String,
+        serverId: String,
+        sincronizado: Boolean,
+        esBorrador: Boolean,
+        estadoId: String,
+        ticketNumber: Int?,
     )
 
     @Query("DELETE FROM incidencias WHERE id = :id")

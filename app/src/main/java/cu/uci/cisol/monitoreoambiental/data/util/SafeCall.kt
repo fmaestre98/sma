@@ -7,12 +7,14 @@ import io.ktor.client.call.body
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
+import io.ktor.client.request.forms.MultiPartFormDataContent
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import io.ktor.http.content.PartData
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import java.nio.channels.UnresolvedAddressException
@@ -40,6 +42,18 @@ suspend inline fun <reified Request, reified Response : Any> HttpClient.postSafe
             url(route)
             setBody(body)
             contentType(ContentType.Application.Json)
+        }
+    }
+}
+
+suspend inline fun <reified Response : Any> HttpClient.postMultipartSafe(
+    route: String,
+    crossinline formData: suspend () -> List<PartData>,
+): Result<Response, DataError.Network> {
+    return safeCall {
+        post {
+            url(route)
+            setBody(MultiPartFormDataContent(formData()))
         }
     }
 }

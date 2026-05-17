@@ -17,4 +17,7 @@ interface TematicaDao {
 
     @Query("DELETE FROM tematicas")
     suspend fun clearAll()
+
+    @Query("SELECT * FROM tematicas WHERE isActive = 1")
+    suspend fun getAllActive(): List<TematicaEntity>
 }

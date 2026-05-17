@@ -6,12 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
+import cu.uci.cisol.monitoreoambiental.domain.model.Localidad
 import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
 import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
+import cu.uci.cisol.monitoreoambiental.domain.repository.LocalidadRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,6 +27,8 @@ data class NuevaIncidenciaState(
     val incidenciaId: String = "",
     val tematicaId: String? = null,
     val tematicas: List<Tematica> = emptyList(),
+    val localidadId: String? = null,
+    val localidades: List<Localidad> = emptyList(),
     val descripcion: String = "",
     val imagenesUris: List<Uri> = emptyList(),
     val latitud: Double? = null,
@@ -38,11 +41,13 @@ data class NuevaIncidenciaState(
     val imagenResolucionUri: Uri? = null,
     val isLoading: Boolean = false,
     val showMapDialog: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 ) {
-    /** Convenience to get the currently selected Tematica object from the list. */
     val selectedTematica: Tematica?
         get() = tematicas.firstOrNull { it.id == tematicaId }
+
+    val selectedLocalidad: Localidad?
+        get() = localidades.firstOrNull { it.id == localidadId }
 
     val estadoLocal: EstadoIncidencia?
         get() = estados.firstOrNull { it.id == estadoId }
@@ -56,6 +61,7 @@ data class NuevaIncidenciaState(
 
 sealed interface NuevaIncidenciaAction {
     data class OnTematicaChange(val tematicaId: String) : NuevaIncidenciaAction
+    data class OnLocalidadChange(val localidadId: String) : NuevaIncidenciaAction
     data class OnDescripcionChange(val descripcion: String) : NuevaIncidenciaAction
     data class OnFotoTomada(val uri: Uri?) : NuevaIncidenciaAction
     data class OnFotoSeleccionada(val uris: List<Uri>) : NuevaIncidenciaAction
@@ -81,7 +87,8 @@ class NuevaIncidenciaViewModel(
     savedStateHandle: SavedStateHandle,
     private val incidenciaRepository: IncidenciaRepository,
     private val tematicaRepository: TematicaRepository,
-    private val estadoRepository: EstadoRepository
+    private val estadoRepository: EstadoRepository,
+    private val localidadRepository: LocalidadRepository,
 ) : ViewModel() {
 
     private val incidenciaIdArg: String? = savedStateHandle["incidenciaId"]
@@ -94,16 +101,17 @@ class NuevaIncidenciaViewModel(
 
     init {
         observeTematicas()
+        observeLocalidades()
         observeEstados()
 
         if (!incidenciaIdArg.isNullOrEmpty() && incidenciaIdArg != "{incidenciaId}") {
             cargarIncidencia(incidenciaIdArg)
         } else {
-            _state.update { 
+            _state.update {
                 it.copy(
                     incidenciaId = UUID.randomUUID().toString(),
-                    modo = FormMode.CREAR
-                ) 
+                    modo = FormMode.CREAR,
+                )
             }
         }
     }
@@ -112,6 +120,14 @@ class NuevaIncidenciaViewModel(
         viewModelScope.launch {
             tematicaRepository.observeTematicas().collect { tematicas ->
                 _state.update { it.copy(tematicas = tematicas) }
+            }
+        }
+    }
+
+    private fun observeLocalidades() {
+        viewModelScope.launch {
+            localidadRepository.observeLocalidades().collect { localidades ->
+                _state.update { it.copy(localidades = localidades) }
             }
         }
     }
@@ -133,15 +149,17 @@ class NuevaIncidenciaViewModel(
                     it.copy(
                         incidenciaId = incidencia.id,
                         tematicaId = incidencia.tematicaId,
+                        localidadId = incidencia.localidadId,
                         descripcion = incidencia.descripcion,
                         imagenesUris = incidencia.imagenesPaths.map { Uri.parse(it) },
-                        imagenResolucionUri = incidencia.imagenResolucionPath?.let { path -> Uri.parse(path) },
+                        imagenResolucionUri =
+                            incidencia.imagenResolucionPath?.let { path -> Uri.parse(path) },
                         latitud = incidencia.latitud,
                         longitud = incidencia.longitud,
                         modo = FormMode.EDITAR,
                         estadoId = incidencia.estadoId,
                         esBorrador = incidencia.esBorrador,
-                        isLoading = false
+                        isLoading = false,
                     )
                 }
             } else {
@@ -156,6 +174,9 @@ class NuevaIncidenciaViewModel(
         when (action) {
             is NuevaIncidenciaAction.OnTematicaChange -> {
                 _state.update { it.copy(tematicaId = action.tematicaId) }
+            }
+            is NuevaIncidenciaAction.OnLocalidadChange -> {
+                _state.update { it.copy(localidadId = action.localidadId) }
             }
             is NuevaIncidenciaAction.OnDescripcionChange -> {
                 _state.update { it.copy(descripcion = action.descripcion) }
@@ -189,7 +210,7 @@ class NuevaIncidenciaViewModel(
                     it.copy(
                         latitud = action.lat,
                         longitud = action.lng,
-                        obteniendoCoordenadas = false
+                        obteniendoCoordenadas = false,
                     )
                 }
             }
@@ -210,7 +231,7 @@ class NuevaIncidenciaViewModel(
                     it.copy(
                         latitud = action.lat,
                         longitud = action.lng,
-                        showMapDialog = false
+                        showMapDialog = false,
                     )
                 }
             }
@@ -235,7 +256,14 @@ class NuevaIncidenciaViewModel(
             return
         }
 
-        val baseEstadoId = currentState.estados.minByOrNull { it.weight }?.id
+        if (!esBorradorFinal && currentState.localidadId == null) {
+            viewModelScope.launch {
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Seleccione una localidad para enviar"))
+            }
+            return
+        }
+
+        val baseEstadoId = currentState.estados.firstOrNull { it.isBase }?.id
         if (!esBorradorFinal && baseEstadoId == null) {
             viewModelScope.launch {
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Error: Estados no cargados. Sincronice primero."))
@@ -243,67 +271,86 @@ class NuevaIncidenciaViewModel(
             return
         }
 
-        val resolvedEstadoId = if (esBorradorFinal) {
-            currentState.estadoId ?: baseEstadoId ?: ""
-        } else {
-            baseEstadoId!!
-        }
+        val resolvedEstadoId =
+            if (esBorradorFinal) {
+                currentState.estadoId ?: baseEstadoId ?: ""
+            } else {
+                baseEstadoId!!
+            }
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
 
-            val incidencia = Incidencia(
-                id = currentState.incidenciaId,
-                tematicaId = currentState.tematicaId,
-                descripcion = currentState.descripcion,
-                imagenesPaths = currentState.imagenesUris.map { it.toString() },
-                imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
-                latitud = currentState.latitud,
-                longitud = currentState.longitud,
-                fechaHora = System.currentTimeMillis(),
-                estadoId = resolvedEstadoId,
-                esBorrador = esBorradorFinal,
-                sincronizado = false // By default is false when saving via the form
-            )
+            val incidencia =
+                Incidencia(
+                    id = currentState.incidenciaId,
+                    tematicaId = currentState.tematicaId!!,
+                    localidadId = currentState.localidadId,
+                    descripcion = currentState.descripcion,
+                    imagenesPaths = currentState.imagenesUris.map { it.toString() },
+                    imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
+                    latitud = currentState.latitud,
+                    longitud = currentState.longitud,
+                    fechaHora = System.currentTimeMillis(),
+                    estadoId = resolvedEstadoId,
+                    esBorrador = esBorradorFinal,
+                    sincronizado = false,
+                )
 
-            val result = incidenciaRepository.guardar(incidencia)
-            if (result.isSuccess) {
-                if (!esBorradorFinal && cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {
-                    delay(1000) // mock delay
-                    incidenciaRepository.enviarAlServidor(incidencia, resolvedEstadoId)
-                }
-                
-                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Incidencia guardada correctamente"))
-                _events.send(NuevaIncidenciaEvent.NavigateBack)
-            } else {
+            val saveResult = incidenciaRepository.guardar(incidencia)
+            if (saveResult.isFailure) {
                 _state.update { it.copy(isLoading = false) }
-                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Error al guardar: ${result.exceptionOrNull()?.message}"))
+                _events.send(
+                    NuevaIncidenciaEvent.ShowSnackbar(
+                        "Error al guardar: ${saveResult.exceptionOrNull()?.message}",
+                    ),
+                )
+                return@launch
             }
+
+            if (!esBorradorFinal) {
+                val sendResult = incidenciaRepository.enviarAlServidor(incidencia)
+                if (sendResult.isFailure) {
+                    _state.update { it.copy(isLoading = false) }
+                    _events.send(
+                        NuevaIncidenciaEvent.ShowSnackbar(
+                            "Guardada localmente. Error al enviar: ${sendResult.exceptionOrNull()?.message}",
+                        ),
+                    )
+                    return@launch
+                }
+            }
+
+            _events.send(NuevaIncidenciaEvent.ShowSnackbar("Incidencia guardada correctamente"))
+            _events.send(NuevaIncidenciaEvent.NavigateBack)
         }
     }
 
     private fun marcarResuelta() {
         val currentState = _state.value
-        val resueltaEstadoId = currentState.estados.find { it.name.equals("Resuelta", ignoreCase = true) }?.id
-        
+        val resueltaEstadoId = currentState.estados.firstOrNull { it.isFinal }?.id
+
         if (resueltaEstadoId == null) {
             viewModelScope.launch {
-                _events.send(NuevaIncidenciaEvent.ShowSnackbar("No se encontró el estado Resuelta"))
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("No se encontró el estado final"))
             }
             return
         }
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
-            val result = incidenciaRepository.actualizarEstado(
-                id = currentState.incidenciaId,
-                estadoId = resueltaEstadoId,
-                esBorrador = false,
-                imagenResolucionPath = currentState.imagenResolucionUri?.toString()
-            )
-            
+            val result =
+                incidenciaRepository.actualizarEstado(
+                    id = currentState.incidenciaId,
+                    estadoId = resueltaEstadoId,
+                    esBorrador = false,
+                    imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
+                )
+
             if (result.isSuccess) {
-                _state.update { it.copy(estadoId = resueltaEstadoId, esBorrador = false, isLoading = false) }
+                _state.update {
+                    it.copy(estadoId = resueltaEstadoId, esBorrador = false, isLoading = false)
+                }
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Marcada como resuelta"))
             } else {
                 _state.update { it.copy(isLoading = false) }
@@ -312,4 +359,3 @@ class NuevaIncidenciaViewModel(
         }
     }
 }
-

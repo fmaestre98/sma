@@ -17,4 +17,7 @@ interface EstadoDao {
 
     @Query("DELETE FROM estados_incidencia")
     suspend fun clearAll()
+
+    @Query("SELECT * FROM estados_incidencia WHERE isActive = 1")
+    suspend fun getAllActive(): List<EstadoEntity>
 }
