@@ -10,7 +10,7 @@ import io.ktor.client.HttpClient
 class ManagementApi(private val client: HttpClient) {
 
     companion object {
-        const val BASE_URL = "http://192.168.1.100:8000/api/v1/management"
+        const val BASE_URL = "http://192.168.1.101:8000/api/v1/management"
     }
 
     suspend fun getTematicas(): Result<TematicasResponseDto, DataError.Network> {

@@ -123,7 +123,8 @@ class HomeViewModel(
         _uiState.value = HomeUiState(
             conteosPorEstado = conteosSimulados,
             datosMensuales = datosMensuales,
-            isLoading = false
+            isLoading = false,
+            totalPendientes = 5
         )
     }
 
