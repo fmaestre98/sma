@@ -1,8 +1,11 @@
 {
-	"folders": [
-		{
-			"path": "."
-		}
-	],
-	"settings": {}
+  "folders": [
+    {
+      "path": ".",
+    },
+    {
+      "path": "../../CISOL/PT Varadero /sg_sma_backend",
+    },
+  ],
+  "settings": {},
 }

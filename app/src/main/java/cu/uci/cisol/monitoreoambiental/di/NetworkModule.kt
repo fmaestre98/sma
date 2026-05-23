@@ -1,6 +1,8 @@
 package cu.uci.cisol.monitoreoambiental.di
 
 import cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository
+import io.ktor.client.plugins.DefaultRequest
+import io.ktor.client.request.header
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.auth.Auth
@@ -28,6 +30,9 @@ val networkModule = module {
     single {
         val sessionRepository: SessionRepository = get()
         HttpClient(Android) {
+            install(DefaultRequest) {
+                header("x-client-type", "apk")
+            }
             install(Logging) {
                 logger = Logger.SIMPLE
                 level = LogLevel.ALL
@@ -56,9 +61,10 @@ val networkModule = module {
                         val refresh = sessionRepository.getRefreshToken() ?: return@refreshTokens null
                         try {
                             val client = io.ktor.client.HttpClient(Android) {
+                                install(DefaultRequest) { header("x-client-type", "apk") }
                                 install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
                             }
-                            val response = client.post("https://api.test-monitoreo.com/auth/token/refresh/") {
+                            val response = client.post("${cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.BASE_URL}/auth/token/refresh/") {
                                 contentType(ContentType.Application.Json)
                                 setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
                             }
@@ -90,9 +96,10 @@ val networkModule = module {
                         if (refresh != null) {
                             try {
                                 val refreshClient = io.ktor.client.HttpClient(Android) {
+                                    install(DefaultRequest) { header("x-client-type", "apk") }
                                     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
                                 }
-                                val res = refreshClient.post("https://api.test-monitoreo.com/auth/token/refresh/") {
+                                val res = refreshClient.post("${cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.BASE_URL}/auth/token/refresh/") {
                                     contentType(ContentType.Application.Json)
                                     setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
                                 }

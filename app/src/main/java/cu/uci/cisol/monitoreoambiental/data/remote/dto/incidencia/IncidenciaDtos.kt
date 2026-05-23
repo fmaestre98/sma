@@ -8,7 +8,7 @@ data class IncidenciasListResponseDto(
     val count: Int,
     val next: String? = null,
     val previous: String? = null,
-    val results: List<IncidenciaListItemDto>,
+    @SerialName("incidencias") val results: List<IncidenciaListItemDto>,
 )
 
 @Serializable

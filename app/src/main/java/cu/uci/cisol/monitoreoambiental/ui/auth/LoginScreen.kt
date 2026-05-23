@@ -160,14 +160,14 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row {
+        /*Row {
             Text("¿No posee cuenta? ", color = Color.Gray)
             Text(
                 text = "Registrar",
                 color = Color(0xFF005b82),
                 modifier = Modifier.clickable { onNavigateToRegister() }
             )
-        }
+        }*/
 
         Spacer(modifier = Modifier.weight(1f))
     }
