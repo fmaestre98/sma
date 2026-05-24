@@ -18,7 +18,7 @@ import androidx.room.TypeConverters
         EstadoEntity::class,
         LocalidadEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class MonitoreoDatabase : RoomDatabase() {

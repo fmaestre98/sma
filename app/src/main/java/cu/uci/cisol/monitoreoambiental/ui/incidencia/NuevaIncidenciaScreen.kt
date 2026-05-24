@@ -65,6 +65,7 @@ fun NuevaIncidenciaRoot(
     viewModel: NuevaIncidenciaViewModel = koinViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Manejar eventos
     LaunchedEffect(Unit) {
@@ -72,7 +73,7 @@ fun NuevaIncidenciaRoot(
             when (event) {
                 is NuevaIncidenciaEvent.NavigateBack -> onNavigateBack()
                 is NuevaIncidenciaEvent.ShowSnackbar -> {
-                    // El SnackbarHost lo manejamos en la pantalla
+                    snackbarHostState.showSnackbar(event.message)
                 }
             }
         }
@@ -82,7 +83,7 @@ fun NuevaIncidenciaRoot(
         state = state,
         onAction = viewModel::onAction,
         onNavigateBack = onNavigateBack,
-        events = viewModel.events
+        snackbarHostState = snackbarHostState
     )
 }
 
@@ -92,18 +93,9 @@ fun NuevaIncidenciaScreen(
     state: NuevaIncidenciaState,
     onAction: (NuevaIncidenciaAction) -> Unit,
     onNavigateBack: () -> Unit,
-    events: kotlinx.coroutines.flow.Flow<NuevaIncidenciaEvent>
+    snackbarHostState: SnackbarHostState
 ) {
     val context = LocalContext.current
-    val snackbarHostState = remember { SnackbarHostState() }
-    
-    LaunchedEffect(Unit) {
-        events.collect { event ->
-            if (event is NuevaIncidenciaEvent.ShowSnackbar) {
-                snackbarHostState.showSnackbar(event.message)
-            }
-        }
-    }
 
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
     var photoUri by remember { mutableStateOf<Uri?>(null) }

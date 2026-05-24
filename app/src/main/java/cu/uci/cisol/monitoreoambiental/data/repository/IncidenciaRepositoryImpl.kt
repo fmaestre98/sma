@@ -7,6 +7,7 @@ import cu.uci.cisol.monitoreoambiental.data.local.db.LocalidadDao
 import cu.uci.cisol.monitoreoambiental.data.local.db.TematicaDao
 import cu.uci.cisol.monitoreoambiental.data.local.entity.IncidenciaEntity
 import cu.uci.cisol.monitoreoambiental.data.remote.ManagementApi
+import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.CreateIncidenciaResponseDto
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.IncidenciaListItemDto
 import cu.uci.cisol.monitoreoambiental.data.util.CatalogResolver
 import cu.uci.cisol.monitoreoambiental.data.util.IncidenciaMultipartBuilder
@@ -94,8 +95,18 @@ class IncidenciaRepositoryImpl(
         }
     }
 
-    override suspend fun syncDesdeServidor(): Result<Unit> {
-        return when (val result = managementApi.getIncidencias()) {
+    override suspend fun syncDesdeServidor(
+        page: Int?,
+        pageSize: Int?,
+        search: String?,
+        ordering: String?
+    ): Result<Int> {
+        return when (val result = managementApi.getIncidencias(
+            ordering = ordering,
+            page = page,
+            pageSize = pageSize,
+            search = search
+        )) {
             is NetworkResult.Success -> {
                 withContext(Dispatchers.IO) {
                     val tematicas = tematicaDao.getAllActive()
@@ -106,10 +117,10 @@ class IncidenciaRepositoryImpl(
                         mergeRemoteIncidencia(remote, tematicas, estados, localidades)
                     }
                 }
-                kotlin.Result.success(Unit)
+                kotlin.Result.success(result.data.count)
             }
             is NetworkResult.Error ->
-                kotlin.Result.failure(Exception("Error al sincronizar incidencias"))
+                kotlin.Result.failure(Exception("Error al sincronizar incidencias: ${result.error}"))
         }
     }
 
@@ -141,6 +152,18 @@ class IncidenciaRepositoryImpl(
                     esBorrador = false,
                     sincronizado = true,
                     ticketNumber = remote.ticketNumber,
+                    themeColor = remote.themeColor,
+                    statusColor = remote.statusColor,
+                    criticality = remote.criticality,
+                    criticalityColor = remote.criticalityColor,
+                    themeName = remote.theme,
+                    statusName = remote.status,
+                    localityName = remote.locality,
+                    reporterName = remote.reporterName,
+                    assignedToName = remote.assignedToName,
+                    updatedAt = remote.updatedAt,
+                    language = remote.language,
+                    isActive = remote.isActive,
                 )
             } else {
                 IncidenciaEntity(
@@ -158,6 +181,18 @@ class IncidenciaRepositoryImpl(
                     esBorrador = false,
                     sincronizado = true,
                     ticketNumber = remote.ticketNumber,
+                    themeColor = remote.themeColor,
+                    statusColor = remote.statusColor,
+                    criticality = remote.criticality,
+                    criticalityColor = remote.criticalityColor,
+                    themeName = remote.theme,
+                    statusName = remote.status,
+                    localityName = remote.locality,
+                    reporterName = remote.reporterName,
+                    assignedToName = remote.assignedToName,
+                    updatedAt = remote.updatedAt,
+                    language = remote.language,
+                    isActive = remote.isActive,
                 )
             }
 
@@ -166,6 +201,175 @@ class IncidenciaRepositoryImpl(
 
     override suspend fun obtenerPorId(id: String): Incidencia? {
         return withContext(Dispatchers.IO) { incidenciaDao.obtenerPorId(id)?.toDomain() }
+    }
+
+    override suspend fun sincronizarDetalle(id: String): Result<Unit> {
+        val local =
+            withContext(Dispatchers.IO) {
+                incidenciaDao.obtenerPorId(id) ?: incidenciaDao.obtenerPorServerId(id)
+            }
+        val remoteId = local?.serverId ?: local?.id ?: id
+
+        return when (val result = managementApi.getIncidenciaDetail(remoteId)) {
+            is NetworkResult.Success -> {
+                withContext(Dispatchers.IO) {
+                    mergeDetailResponse(localId = local?.id ?: id, response = result.data)
+                }
+                kotlin.Result.success(Unit)
+            }
+            is NetworkResult.Error ->
+                kotlin.Result.failure(
+                    Exception("Error al sincronizar detalle de incidencia: ${result.error}"),
+                )
+        }
+    }
+
+    private suspend fun mergeDetailResponse(
+        localId: String,
+        response: CreateIncidenciaResponseDto,
+    ) {
+        val existing =
+            incidenciaDao.obtenerPorId(localId)
+                ?: incidenciaDao.obtenerPorServerId(response.id)
+                ?: incidenciaDao.obtenerPorId(response.id)
+
+        val tematicas = tematicaDao.getAllActive()
+        val localidades = localidadDao.getAllActive()
+
+        val tematicaId = CatalogResolver.resolveTematicaId(response.theme, tematicas) ?: response.theme
+        val localidadId =
+            CatalogResolver.resolveLocalidadId(response.locality, localidades) ?: response.locality
+        val themeName = tematicas.find { it.id == response.theme }?.name ?: response.theme
+        val localityName = localidades.find { it.id == response.locality }?.name ?: response.locality
+
+        val updated =
+            (existing ?: IncidenciaEntity(
+                id = localId,
+                serverId = response.id,
+                tematica = tematicaId,
+                localidadId = localidadId,
+                descripcion = response.description,
+                imagenesPaths = emptyList(),
+                imagenResolucionPath = null,
+                latitud = response.latitude?.toDoubleOrNull(),
+                longitud = response.longitude?.toDoubleOrNull(),
+                fechaHora = parseOcurredAt(response.ocurredAt),
+                estadoId = "",
+                esBorrador = false,
+                sincronizado = true,
+            )).copy(
+                serverId = response.id,
+                tematica = tematicaId,
+                localidadId = localidadId,
+                descripcion = response.description,
+                address = response.address,
+                latitud = response.latitude?.toDoubleOrNull(),
+                longitud = response.longitude?.toDoubleOrNull(),
+                fechaHora = parseOcurredAt(response.ocurredAt),
+                assignedToId = response.assignedTo,
+                isActive = response.isActive,
+                language = response.language,
+                updatedAt = response.updatedAt,
+                themeName = themeName,
+                localityName = localityName,
+                sincronizado = true,
+                esBorrador = false,
+            )
+
+        incidenciaDao.insertar(updated)
+    }
+
+    override fun observarPaginado(filtro: String, search: String, limit: Int, offset: Int): Flow<List<Incidencia>> {
+        return incidenciaDao.obtenerPaginado(filtro, search, limit, offset).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun obtenerCantidad(filtro: String, search: String): Flow<Int> {
+        return incidenciaDao.obtenerCantidad(filtro, search)
+    }
+
+    override suspend fun actualizarRemoto(
+        id: String,
+        theme: String,
+        locality: String,
+        description: String,
+        address: String?,
+        latitude: Double?,
+        longitude: Double?,
+        occurredAt: Long,
+        evidences: List<String>,
+        assignedTo: String?,
+        isActive: Boolean,
+        language: String
+    ): Result<Unit> {
+        val occurredAtIso = IsoInstantFormat.formatFromEpochMilli(occurredAt)
+        val body = cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.UpdateIncidenciaRequestDto(
+            isActive = isActive,
+            language = language,
+            theme = theme,
+            locality = locality,
+            description = description,
+            address = address,
+            latitude = latitude?.toString(),
+            longitude = longitude?.toString(),
+            ocurredAt = occurredAtIso,
+            evidences = evidences,
+            assignedTo = assignedTo
+        )
+
+        return when (val result = managementApi.updateIncidencia(id, body)) {
+            is NetworkResult.Success -> {
+                val response = result.data
+                withContext(Dispatchers.IO) {
+                    val existing = incidenciaDao.obtenerPorId(id)
+                    val tematicas = tematicaDao.getAllActive()
+                    val estados = estadoDao.getAllActive()
+                    val localidades = localidadDao.getAllActive()
+
+                    val tematicaId = CatalogResolver.resolveTematicaId(response.theme, tematicas) ?: response.theme
+                    val localidadId = CatalogResolver.resolveLocalidadId(response.locality, localidades) ?: response.locality
+                    
+                    val themeName = tematicas.find { it.id == response.theme }?.name ?: response.theme
+                    val localityName = localidades.find { it.id == response.locality }?.name ?: response.locality
+
+                    val updated = (existing ?: IncidenciaEntity(
+                        id = id,
+                        serverId = id,
+                        tematica = tematicaId,
+                        localidadId = localidadId,
+                        descripcion = response.description,
+                        imagenResolucionPath = null,
+                        latitud = response.latitude?.toDoubleOrNull(),
+                        longitud = response.longitude?.toDoubleOrNull(),
+                        fechaHora = parseOcurredAt(response.ocurredAt),
+                        estadoId = existing?.estadoId ?: "",
+                        esBorrador = false,
+                        sincronizado = true
+                    )).copy(
+                        tematica = tematicaId,
+                        localidadId = localidadId,
+                        descripcion = response.description,
+                        address = response.address,
+                        latitud = response.latitude?.toDoubleOrNull(),
+                        longitud = response.longitude?.toDoubleOrNull(),
+                        fechaHora = parseOcurredAt(response.ocurredAt),
+                        assignedToId = response.assignedTo,
+                        isActive = response.isActive,
+                        language = response.language,
+                        updatedAt = response.updatedAt,
+                        themeName = themeName,
+                        localityName = localityName,
+                        sincronizado = true,
+                        esBorrador = false
+                    )
+                    incidenciaDao.insertar(updated)
+                }
+                kotlin.Result.success(Unit)
+            }
+            is NetworkResult.Error ->
+                kotlin.Result.failure(Exception("Error de red al actualizar incidencia: ${result.error}"))
+        }
     }
 
     private fun parseOcurredAt(iso: String): Long =
@@ -187,6 +391,20 @@ class IncidenciaRepositoryImpl(
             esBorrador = esBorrador,
             sincronizado = sincronizado,
             ticketNumber = ticketNumber,
+            themeColor = themeColor,
+            statusColor = statusColor,
+            criticality = criticality,
+            criticalityColor = criticalityColor,
+            themeName = themeName,
+            statusName = statusName,
+            localityName = localityName,
+            reporterName = reporterName,
+            assignedToName = assignedToName,
+            address = address,
+            assignedToId = assignedToId,
+            updatedAt = updatedAt,
+            language = language,
+            isActive = isActive,
         )
 
     private fun IncidenciaEntity.toDomain() =
@@ -205,5 +423,19 @@ class IncidenciaRepositoryImpl(
             esBorrador = esBorrador,
             sincronizado = sincronizado,
             ticketNumber = ticketNumber,
+            themeColor = themeColor,
+            statusColor = statusColor,
+            criticality = criticality,
+            criticalityColor = criticalityColor,
+            themeName = themeName,
+            statusName = statusName,
+            localityName = localityName,
+            reporterName = reporterName,
+            assignedToName = assignedToName,
+            address = address,
+            assignedToId = assignedToId,
+            updatedAt = updatedAt,
+            language = language,
+            isActive = isActive,
         )
 }

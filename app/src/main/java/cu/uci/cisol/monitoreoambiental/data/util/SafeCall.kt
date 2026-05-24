@@ -8,6 +8,7 @@ import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.client.request.forms.MultiPartFormDataContent
+import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -39,6 +40,19 @@ suspend inline fun <reified Request, reified Response : Any> HttpClient.postSafe
 ): Result<Response, DataError.Network> {
     return safeCall {
         post {
+            url(route)
+            setBody(body)
+            contentType(ContentType.Application.Json)
+        }
+    }
+}
+
+suspend inline fun <reified Request, reified Response : Any> HttpClient.patchSafe(
+    route: String,
+    body: Request
+): Result<Response, DataError.Network> {
+    return safeCall {
+        patch {
             url(route)
             setBody(body)
             contentType(ContentType.Application.Json)

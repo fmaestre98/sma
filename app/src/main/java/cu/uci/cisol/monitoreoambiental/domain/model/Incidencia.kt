@@ -20,4 +20,18 @@ data class Incidencia(
     /** true si ya fue sincronizada con el servidor. */
     val sincronizado: Boolean = false,
     val ticketNumber: Int? = null,
+    val themeColor: String? = null,
+    val statusColor: String? = null,
+    val criticality: String? = null,
+    val criticalityColor: String? = null,
+    val themeName: String? = null,
+    val statusName: String? = null,
+    val localityName: String? = null,
+    val reporterName: String? = null,
+    val assignedToName: String? = null,
+    val address: String? = null,
+    val assignedToId: String? = null,
+    val updatedAt: String? = null,
+    val language: String? = null,
+    val isActive: Boolean = true,
 )

@@ -49,3 +49,18 @@ data class CreateIncidenciaResponseDto(
     @SerialName("ocurred_at") val ocurredAt: String,
     @SerialName("assigned_to") val assignedTo: String? = null,
 )
+
+@Serializable
+data class UpdateIncidenciaRequestDto(
+    @SerialName("is_active") val isActive: Boolean,
+    val language: String,
+    val theme: String,
+    val locality: String,
+    val description: String,
+    val address: String? = null,
+    val latitude: String? = null,
+    val longitude: String? = null,
+    @SerialName("ocurred_at") val ocurredAt: String,
+    val evidences: List<String> = emptyList(),
+    @SerialName("assigned_to") val assignedTo: String? = null,
+)

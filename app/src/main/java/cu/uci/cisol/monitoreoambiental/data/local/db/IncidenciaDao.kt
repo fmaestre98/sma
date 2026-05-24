@@ -60,4 +60,30 @@ interface IncidenciaDao {
 
     @Query("DELETE FROM incidencias WHERE id = :id")
     suspend fun eliminar(id: String)
+
+    @Query("""
+        SELECT * FROM incidencias 
+        WHERE (:filtro = 'TODAS' 
+            OR (:filtro = 'BORRADORES' AND esBorrador = 1) 
+            OR (:filtro = 'ENVIADAS' AND esBorrador = 0 AND sincronizado = 1))
+          AND (descripcion LIKE '%' || :search || '%' 
+            OR tematica LIKE '%' || :search || '%' 
+            OR themeName LIKE '%' || :search || '%'
+            OR :search = '')
+        ORDER BY fechaHora DESC 
+        LIMIT :limit OFFSET :offset
+    """)
+    fun obtenerPaginado(filtro: String, search: String, limit: Int, offset: Int): Flow<List<IncidenciaEntity>>
+
+    @Query("""
+        SELECT COUNT(*) FROM incidencias 
+        WHERE (:filtro = 'TODAS' 
+            OR (:filtro = 'BORRADORES' AND esBorrador = 1) 
+            OR (:filtro = 'ENVIADAS' AND esBorrador = 0 AND sincronizado = 1))
+          AND (descripcion LIKE '%' || :search || '%' 
+            OR tematica LIKE '%' || :search || '%' 
+            OR themeName LIKE '%' || :search || '%'
+            OR :search = '')
+    """)
+    fun obtenerCantidad(filtro: String, search: String): Flow<Int>
 }

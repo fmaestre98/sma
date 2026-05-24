@@ -10,5 +10,6 @@ val uiModule = module {
     viewModel { HomeViewModel(get(), get(), get(), get(), get()) }
     viewModel { cu.uci.cisol.monitoreoambiental.ui.incidencia.NuevaIncidenciaViewModel(get(), get(), get(), get(), get()) }
     viewModel { cu.uci.cisol.monitoreoambiental.ui.incidencia.MisIncidenciasViewModel(get(), get(), get(), get()) }
+    viewModel { cu.uci.cisol.monitoreoambiental.ui.incidencia.DetalleIncidenciaViewModel(get(), get(), get(), get()) }
 }
 

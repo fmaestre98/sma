@@ -106,10 +106,23 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
         return Result.failure(Exception("Incidencia no encontrada"))
     }
 
-    override suspend fun syncDesdeServidor(): Result<Unit> = Result.success(Unit)
+    override suspend fun syncDesdeServidor(
+        page: Int?,
+        pageSize: Int?,
+        search: String?,
+        ordering: String?
+    ): Result<Int> = Result.success(mockData.size)
 
     override suspend fun obtenerPorId(id: String): Incidencia? {
         return mockData.find { it.id == id }
+    }
+
+    override suspend fun sincronizarDetalle(id: String): Result<Unit> {
+        return if (mockData.any { it.id == id }) {
+            Result.success(Unit)
+        } else {
+            Result.failure(Exception("Incidencia no encontrada"))
+        }
     }
 
     override suspend fun actualizarEstado(
@@ -128,6 +141,79 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
                         imagenResolucionPath ?: mockData[index].imagenResolucionPath,
                     sincronizado = !esBorrador,
                 )
+            _incidencias.update { mockData.toList() }
+            return Result.success(Unit)
+        }
+        return Result.failure(Exception("Incidencia no encontrada"))
+    }
+
+    override fun observarPaginado(
+        filtro: String,
+        search: String,
+        limit: Int,
+        offset: Int
+    ): Flow<List<Incidencia>> {
+        return _incidencias.map { list ->
+            list.filter { inc ->
+                val matchesFilter = when (filtro) {
+                    "BORRADORES" -> inc.esBorrador
+                    "ENVIADAS" -> !inc.esBorrador && inc.sincronizado
+                    else -> true
+                }
+                val matchesSearch = inc.descripcion.contains(search, ignoreCase = true) ||
+                        inc.tematicaId.contains(search, ignoreCase = true) ||
+                        (inc.themeName?.contains(search, ignoreCase = true) == true)
+                matchesFilter && matchesSearch
+            }.sortedByDescending { it.fechaHora }.drop(offset).take(limit)
+        }
+    }
+
+    override fun obtenerCantidad(filtro: String, search: String): Flow<Int> {
+        return _incidencias.map { list ->
+            list.count { inc ->
+                val matchesFilter = when (filtro) {
+                    "BORRADORES" -> inc.esBorrador
+                    "ENVIADAS" -> !inc.esBorrador && inc.sincronizado
+                    else -> true
+                }
+                val matchesSearch = inc.descripcion.contains(search, ignoreCase = true) ||
+                        inc.tematicaId.contains(search, ignoreCase = true) ||
+                        (inc.themeName?.contains(search, ignoreCase = true) == true)
+                matchesFilter && matchesSearch
+            }
+        }
+    }
+
+    override suspend fun actualizarRemoto(
+        id: String,
+        theme: String,
+        locality: String,
+        description: String,
+        address: String?,
+        latitude: Double?,
+        longitude: Double?,
+        occurredAt: Long,
+        evidences: List<String>,
+        assignedTo: String?,
+        isActive: Boolean,
+        language: String
+    ): Result<Unit> {
+        val index = mockData.indexOfFirst { it.id == id }
+        if (index != -1) {
+            mockData[index] = mockData[index].copy(
+                tematicaId = theme,
+                localidadId = locality,
+                descripcion = description,
+                address = address,
+                latitud = latitude,
+                longitud = longitude,
+                fechaHora = occurredAt,
+                assignedToId = assignedTo,
+                isActive = isActive,
+                language = language,
+                sincronizado = true,
+                esBorrador = false
+            )
             _incidencias.update { mockData.toList() }
             return Result.success(Unit)
         }

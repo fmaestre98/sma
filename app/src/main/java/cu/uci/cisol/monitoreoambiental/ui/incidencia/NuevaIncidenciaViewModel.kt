@@ -280,49 +280,50 @@ class NuevaIncidenciaViewModel(
 
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
+            try {
+                val incidencia =
+                    Incidencia(
+                        id = currentState.incidenciaId,
+                        tematicaId = currentState.tematicaId!!,
+                        localidadId = currentState.localidadId,
+                        descripcion = currentState.descripcion,
+                        imagenesPaths = currentState.imagenesUris.map { it.toString() },
+                        imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
+                        latitud = currentState.latitud,
+                        longitud = currentState.longitud,
+                        fechaHora = System.currentTimeMillis(),
+                        estadoId = resolvedEstadoId,
+                        esBorrador = esBorradorFinal,
+                        sincronizado = false,
+                    )
 
-            val incidencia =
-                Incidencia(
-                    id = currentState.incidenciaId,
-                    tematicaId = currentState.tematicaId!!,
-                    localidadId = currentState.localidadId,
-                    descripcion = currentState.descripcion,
-                    imagenesPaths = currentState.imagenesUris.map { it.toString() },
-                    imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
-                    latitud = currentState.latitud,
-                    longitud = currentState.longitud,
-                    fechaHora = System.currentTimeMillis(),
-                    estadoId = resolvedEstadoId,
-                    esBorrador = esBorradorFinal,
-                    sincronizado = false,
-                )
-
-            val saveResult = incidenciaRepository.guardar(incidencia)
-            if (saveResult.isFailure) {
-                _state.update { it.copy(isLoading = false) }
-                _events.send(
-                    NuevaIncidenciaEvent.ShowSnackbar(
-                        "Error al guardar: ${saveResult.exceptionOrNull()?.message}",
-                    ),
-                )
-                return@launch
-            }
-
-            if (!esBorradorFinal) {
-                val sendResult = incidenciaRepository.enviarAlServidor(incidencia)
-                if (sendResult.isFailure) {
-                    _state.update { it.copy(isLoading = false) }
+                val saveResult = incidenciaRepository.guardar(incidencia)
+                if (saveResult.isFailure) {
                     _events.send(
                         NuevaIncidenciaEvent.ShowSnackbar(
-                            "Guardada localmente. Error al enviar: ${sendResult.exceptionOrNull()?.message}",
+                            "Error al guardar: ${saveResult.exceptionOrNull()?.message}",
                         ),
                     )
                     return@launch
                 }
-            }
 
-            _events.send(NuevaIncidenciaEvent.ShowSnackbar("Incidencia guardada correctamente"))
-            _events.send(NuevaIncidenciaEvent.NavigateBack)
+                if (!esBorradorFinal) {
+                    val sendResult = incidenciaRepository.enviarAlServidor(incidencia)
+                    if (sendResult.isFailure) {
+                        _events.send(
+                            NuevaIncidenciaEvent.ShowSnackbar(
+                                "Guardada localmente. Error al enviar: ${sendResult.exceptionOrNull()?.message}",
+                            ),
+                        )
+                        return@launch
+                    }
+                }
+
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Incidencia guardada correctamente"))
+                _events.send(NuevaIncidenciaEvent.NavigateBack)
+            } finally {
+                _state.update { it.copy(isLoading = false) }
+            }
         }
     }
 
