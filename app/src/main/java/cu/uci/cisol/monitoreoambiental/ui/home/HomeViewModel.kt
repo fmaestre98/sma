@@ -1,7 +1,10 @@
 package cu.uci.cisol.monitoreoambiental.ui.home
 
+import android.content.Context
+import androidx.annotation.DisplayContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import cu.uci.cisol.monitoreoambiental.data.work.IncidenciaSyncScheduler
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository
@@ -44,6 +47,7 @@ data class HomeUiState(
 )
 
 class HomeViewModel(
+    private val appContext: Context,
     private val repository: IncidenciaRepository,
     private val authRepository: AuthRepository,
     private val tematicaRepository: TematicaRepository,
@@ -59,6 +63,7 @@ class HomeViewModel(
         syncEstados()
         syncLocalities()
         cargarDatos()
+        IncidenciaSyncScheduler.enqueueUploadPending(appContext)
     }
 
     fun logout() {

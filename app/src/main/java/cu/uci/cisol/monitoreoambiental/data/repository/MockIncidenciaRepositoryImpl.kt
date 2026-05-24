@@ -1,6 +1,7 @@
 package cu.uci.cisol.monitoreoambiental.data.repository
 
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
+import cu.uci.cisol.monitoreoambiental.domain.model.SyncUploadResult
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -112,6 +113,24 @@ class MockIncidenciaRepositoryImpl : IncidenciaRepository {
         search: String?,
         ordering: String?
     ): Result<Int> = Result.success(mockData.size)
+
+    override suspend fun enviarPendientesAlServidor(): Result<SyncUploadResult> {
+        val pendientes = obtenerPendientes()
+        var enviadas = 0
+        var fallidas = 0
+        for (incidencia in pendientes) {
+            if (enviarAlServidor(incidencia).isSuccess) {
+                enviadas++
+            } else {
+                fallidas++
+            }
+        }
+        return Result.success(SyncUploadResult(enviadas = enviadas, fallidas = fallidas))
+    }
+
+    override suspend fun syncCompletoDesdeServidor(pageSize: Int): Result<Int> {
+        return syncDesdeServidor(page = 1, pageSize = pageSize, search = null, ordering = "-updated_at")
+    }
 
     override suspend fun obtenerPorId(id: String): Incidencia? {
         return mockData.find { it.id == id }

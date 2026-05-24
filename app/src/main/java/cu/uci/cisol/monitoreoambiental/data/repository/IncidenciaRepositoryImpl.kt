@@ -13,6 +13,7 @@ import cu.uci.cisol.monitoreoambiental.data.util.CatalogResolver
 import cu.uci.cisol.monitoreoambiental.data.util.IncidenciaMultipartBuilder
 import cu.uci.cisol.monitoreoambiental.data.util.IsoInstantFormat
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
+import cu.uci.cisol.monitoreoambiental.domain.model.SyncUploadResult
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import cu.uci.cisol.monitoreoambiental.domain.util.Result as NetworkResult
 import kotlinx.coroutines.Dispatchers
@@ -99,14 +100,65 @@ class IncidenciaRepositoryImpl(
         page: Int?,
         pageSize: Int?,
         search: String?,
-        ordering: String?
-    ): Result<Int> {
-        return when (val result = managementApi.getIncidencias(
-            ordering = ordering,
-            page = page,
-            pageSize = pageSize,
-            search = search
-        )) {
+        ordering: String?,
+    ): Result<Int> =
+        fetchAndMergeIncidenciasPage(page, pageSize, search, ordering).map { it.first }
+
+    override suspend fun enviarPendientesAlServidor(): Result<SyncUploadResult> {
+        val pendientes = obtenerPendientes()
+        var enviadas = 0
+        var fallidas = 0
+        for (incidencia in pendientes) {
+            if (enviarAlServidor(incidencia).isSuccess) {
+                enviadas++
+            } else {
+                fallidas++
+            }
+        }
+        return kotlin.Result.success(SyncUploadResult(enviadas = enviadas, fallidas = fallidas))
+    }
+
+    override suspend fun syncCompletoDesdeServidor(pageSize: Int): Result<Int> {
+        var page = 1
+        var totalCount = 0
+        while (true) {
+            val pageResult =
+                fetchAndMergeIncidenciasPage(
+                    page = page,
+                    pageSize = pageSize,
+                    search = null,
+                    ordering = "-updated_at",
+                )
+            if (pageResult.isFailure) {
+                return kotlin.Result.failure(
+                    pageResult.exceptionOrNull()
+                        ?: Exception("Error al sincronizar incidencias"),
+                )
+            }
+            val (count, itemsInPage) = pageResult.getOrThrow()
+            totalCount = count
+            if (itemsInPage == 0 || page * pageSize >= totalCount) {
+                return kotlin.Result.success(totalCount)
+            }
+            page++
+        }
+    }
+
+    private suspend fun fetchAndMergeIncidenciasPage(
+        page: Int?,
+        pageSize: Int?,
+        search: String?,
+        ordering: String?,
+    ): Result<Pair<Int, Int>> {
+        return when (
+            val result =
+                managementApi.getIncidencias(
+                    ordering = ordering,
+                    page = page,
+                    pageSize = pageSize,
+                    search = search,
+                )
+        ) {
             is NetworkResult.Success -> {
                 withContext(Dispatchers.IO) {
                     val tematicas = tematicaDao.getAllActive()
@@ -117,10 +169,14 @@ class IncidenciaRepositoryImpl(
                         mergeRemoteIncidencia(remote, tematicas, estados, localidades)
                     }
                 }
-                kotlin.Result.success(result.data.count)
+                kotlin.Result.success(
+                    Pair(result.data.count, result.data.results.size),
+                )
             }
             is NetworkResult.Error ->
-                kotlin.Result.failure(Exception("Error al sincronizar incidencias: ${result.error}"))
+                kotlin.Result.failure(
+                    Exception("Error al sincronizar incidencias: ${result.error}"),
+                )
         }
     }
 

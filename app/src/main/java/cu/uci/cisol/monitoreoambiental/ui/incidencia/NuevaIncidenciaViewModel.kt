@@ -1,5 +1,6 @@
 package cu.uci.cisol.monitoreoambiental.ui.incidencia
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -11,6 +12,7 @@ import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
 import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.LocalidadRepository
+import cu.uci.cisol.monitoreoambiental.data.work.IncidenciaSyncScheduler
 import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -84,6 +86,7 @@ sealed interface NuevaIncidenciaEvent {
 }
 
 class NuevaIncidenciaViewModel(
+    private val appContext: Context,
     savedStateHandle: SavedStateHandle,
     private val incidenciaRepository: IncidenciaRepository,
     private val tematicaRepository: TematicaRepository,
@@ -310,9 +313,10 @@ class NuevaIncidenciaViewModel(
                 if (!esBorradorFinal) {
                     val sendResult = incidenciaRepository.enviarAlServidor(incidencia)
                     if (sendResult.isFailure) {
+                        IncidenciaSyncScheduler.enqueueUploadPending(appContext)
                         _events.send(
                             NuevaIncidenciaEvent.ShowSnackbar(
-                                "Guardada localmente. Error al enviar: ${sendResult.exceptionOrNull()?.message}",
+                                "Guardada localmente. Se enviará cuando haya conexión.",
                             ),
                         )
                         return@launch

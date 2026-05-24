@@ -1,6 +1,7 @@
 package cu.uci.cisol.monitoreoambiental.domain.repository
 
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
+import cu.uci.cisol.monitoreoambiental.domain.model.SyncUploadResult
 import kotlinx.coroutines.flow.Flow
 
 interface IncidenciaRepository {
@@ -15,6 +16,8 @@ interface IncidenciaRepository {
         search: String? = null,
         ordering: String? = "-updated_at"
     ): Result<Int>
+    suspend fun enviarPendientesAlServidor(): Result<SyncUploadResult>
+    suspend fun syncCompletoDesdeServidor(pageSize: Int = 50): Result<Int>
     suspend fun obtenerPorId(id: String): Incidencia?
     suspend fun sincronizarDetalle(id: String): Result<Unit>
     suspend fun actualizarEstado(

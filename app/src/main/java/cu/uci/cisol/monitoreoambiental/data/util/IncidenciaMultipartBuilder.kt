@@ -16,8 +16,8 @@ object IncidenciaMultipartBuilder {
             append("theme", incidencia.tematicaId)
             append("locality", requireNotNull(incidencia.localidadId) { "localidadId requerida" })
             append("description", incidencia.descripcion)
-            incidencia.latitud?.let { append("latitude", it.toString()) }
-            incidencia.longitud?.let { append("longitude", it.toString()) }
+            incidencia.latitud?.let { append("latitude", it.toString().take(10)) }
+            incidencia.longitud?.let { append("longitude", it.toString().take(10)) }
             append("ocurred_at", ocurredAt)
 
             incidencia.imagenesPaths.forEachIndexed { index, path ->
