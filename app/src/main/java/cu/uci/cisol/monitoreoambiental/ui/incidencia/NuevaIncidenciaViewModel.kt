@@ -209,10 +209,12 @@ class NuevaIncidenciaViewModel(
                 _state.update { it.copy(obteniendoCoordenadas = true) }
             }
             is NuevaIncidenciaAction.OnCoordenadasObtenidas -> {
+                val latitud = action.lat.toString().take(10).toDouble()
+                val longitud = action.lng.toString().take(10).toDouble()
                 _state.update {
                     it.copy(
-                        latitud = action.lat,
-                        longitud = action.lng,
+                        latitud = latitud,
+                        longitud = longitud,
                         obteniendoCoordenadas = false,
                     )
                 }
@@ -230,10 +232,12 @@ class NuevaIncidenciaViewModel(
                 _state.update { it.copy(showMapDialog = false) }
             }
             is NuevaIncidenciaAction.OnMapLocationSelected -> {
+                val latitud = action.lat.toString().take(10).toDouble()
+                val longitud = action.lng.toString().take(10).toDouble()
                 _state.update {
                     it.copy(
-                        latitud = action.lat,
-                        longitud = action.lng,
+                        latitud = latitud,
+                        longitud = longitud,
                         showMapDialog = false,
                     )
                 }

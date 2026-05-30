@@ -17,14 +17,18 @@ class SincronizarIncidenciasWorker(
     private val sessionRepository: SessionRepository by inject()
 
     override suspend fun doWork(): Result {
+        android.util.Log.d("SyncWorker", "Iniciando worker de sincronización...")
         if (sessionRepository.getAccessToken() == null) {
+            android.util.Log.d("SyncWorker", "No hay token, cancelando sincronización")
             return Result.success()
         }
 
         val syncResult = incidenciaRepository.syncCompletoDesdeServidor(pageSize = PAGE_SIZE)
         return if (syncResult.isSuccess) {
+            android.util.Log.d("SyncWorker", "Sincronización completada con éxito")
             Result.success()
         } else {
+            android.util.Log.e("SyncWorker", "Error en sincronización, reintentando...")
             Result.retry()
         }
     }

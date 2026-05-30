@@ -35,6 +35,7 @@ object IncidenciaSyncScheduler {
     }
 
     fun schedulePeriodicPullSync(context: Context) {
+        android.util.Log.d("SyncWorker", "Programando worker periódico con intervalo de $PULL_INTERVAL_HOURS minutos (WorkManager lo ajustará a 15 min como mínimo)")
         val request =
             PeriodicWorkRequestBuilder<SincronizarIncidenciasWorker>(
                 PULL_INTERVAL_HOURS,
@@ -45,7 +46,7 @@ object IncidenciaSyncScheduler {
 
         WorkManager.getInstance(context).enqueueUniquePeriodicWork(
             PULL_WORK_NAME,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             request,
         )
     }
