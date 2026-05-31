@@ -1,5 +1,6 @@
 package cu.uci.cisol.monitoreoambiental.ui.home.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,27 +53,20 @@ fun HomeIncidenciaCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(44.dp),
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(
+                        color = estadoColor.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(10.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Card(
-                    modifier = Modifier.size(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = estadoColor.copy(alpha = 0.2f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Description,
-                            contentDescription = null,
-                            tint = estadoColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = null,
+                    tint = estadoColor,
+                    modifier = Modifier.size(22.dp)
+                )
             }
 
             Column(
@@ -81,7 +75,7 @@ fun HomeIncidenciaCard(
                     .padding(horizontal = 12.dp)
             ) {
                 Text(
-                    text = incidencia.descripcionCorta,
+                    text = incidencia.descripcionCorta.ifBlank { incidencia.tematica },
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.Bold,
                         color = AzulPrimario

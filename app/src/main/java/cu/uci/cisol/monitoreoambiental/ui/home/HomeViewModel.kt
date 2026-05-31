@@ -117,10 +117,16 @@ class HomeViewModel(
     }
 
     fun onFiltroChange(filtro: String) {
-        filtroFlow.value = filtro
-        estadoDropdownFlow.value = when (filtro) {
+        var curr = filtro
+        if (filtroFlow.value == curr){
+            filtroFlow.value = HomeFiltro.TODAS
+            curr = HomeFiltro.TODAS
+        } else {
+            filtroFlow.value = curr
+        }
+        estadoDropdownFlow.value = when (curr) {
             HomeFiltro.TODAS, HomeFiltro.BORRADOR, HomeFiltro.PENDIENTES_ENVIAR -> null
-            else -> filtro
+            else -> curr
         }
     }
 

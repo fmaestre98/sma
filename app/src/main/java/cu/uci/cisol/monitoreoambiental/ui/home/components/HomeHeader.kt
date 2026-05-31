@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -49,7 +50,7 @@ fun HomeHeader(
             .padding(horizontal = 8.dp, vertical = 8.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(end = 15.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onMenuClick) {
@@ -68,15 +69,7 @@ fun HomeHeader(
                 Image(
                     painter = painterResource(id = R.drawable.logo),
                     contentDescription = "Logo SMA",
-                    modifier = Modifier.size(32.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "SMA",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    modifier = Modifier.width(90.dp).height(45.dp)
                 )
             }
 

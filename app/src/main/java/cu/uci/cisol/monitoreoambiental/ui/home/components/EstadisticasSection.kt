@@ -1,5 +1,6 @@
 package cu.uci.cisol.monitoreoambiental.ui.home.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -102,28 +103,19 @@ private fun EstadisticaCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .padding(0.dp),
+                    .size(36.dp)
+                    .background(
+                        color = estadoColor.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(10.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
-                Card(
-                    modifier = Modifier.size(40.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = CardDefaults.cardColors(containerColor = estadoColor.copy(alpha = 0.2f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-                ) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Description,
-                            contentDescription = null,
-                            tint = estadoColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Outlined.Description,
+                    contentDescription = null,
+                    tint = estadoColor,
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             Column(
@@ -139,7 +131,7 @@ private fun EstadisticaCard(
                 )
                 Text(
                     text = item.count.toString(),
-                    style = MaterialTheme.typography.headlineSmall.copy(
+                    style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = AzulPrimario
                     )
