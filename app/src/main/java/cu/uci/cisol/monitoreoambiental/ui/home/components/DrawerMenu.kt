@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -39,13 +40,15 @@ sealed class DrawerDestino(val route: String, val label: String, val icon: Image
     data object Principal : DrawerDestino("home", "Principal", Icons.Default.Home)
     data object NuevaIncidencia : DrawerDestino("nueva_incidencia", "Nueva Incidencia", Icons.Default.Add)
     data object MisIncidencias : DrawerDestino("mis_incidencias", "Mis Incidencias", Icons.AutoMirrored.Filled.List)
+    data object InfoApp : DrawerDestino("info_app", "Guía de Uso", Icons.Default.Info)
     data object Logout : DrawerDestino("logout", "Cerrar Sesión", Icons.AutoMirrored.Filled.ExitToApp)
 }
 
 private val opcionesNavegacion = listOf(
     DrawerDestino.Principal,
     DrawerDestino.NuevaIncidencia,
-    DrawerDestino.MisIncidencias
+    DrawerDestino.MisIncidencias,
+    DrawerDestino.InfoApp
 )
 
 @Composable

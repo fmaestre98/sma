@@ -92,6 +92,9 @@ class MainActivity : ComponentActivity() {
                                 onVerBorradores = {
                                     navController.navigate("mis_incidencias?filtro=${cu.uci.cisol.monitoreoambiental.ui.incidencia.IncidenciaFiltro.BORRADORES.name}")
                                 },
+                                onInfoApp = {
+                                    navController.navigate("info_app")
+                                },
                                 onLogout = {
                                     homeViewModel.logout()
                                 }
@@ -139,6 +142,12 @@ class MainActivity : ComponentActivity() {
                                         navController.navigate("detalle_incidencia?incidenciaId=$id")
                                     }
                                 }
+                            )
+                        }
+                        
+                        composable("info_app") {
+                            cu.uci.cisol.monitoreoambiental.ui.info.InfoAppScreen(
+                                onNavigateBack = { navController.navigateUp() }
                             )
                         }
                     }

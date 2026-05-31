@@ -57,6 +57,7 @@ fun HomeScreen(
     onNuevaIncidencia: () -> Unit = {},
     onMisIncidencias: () -> Unit = {},
     onVerBorradores: () -> Unit = {},
+    onInfoApp: () -> Unit = {},
     onLogout: () -> Unit = {},
     viewModel: HomeViewModel = koinViewModel()
 ) {
@@ -76,6 +77,7 @@ fun HomeScreen(
                         is DrawerDestino.Principal -> { /* ya estamos aquí */ }
                         is DrawerDestino.NuevaIncidencia -> onNuevaIncidencia()
                         is DrawerDestino.MisIncidencias -> onMisIncidencias()
+                        is DrawerDestino.InfoApp -> onInfoApp()
                         else -> {}
                     }
                 },
