@@ -18,6 +18,7 @@ object IncidenciaMultipartBuilder {
             append("description", incidencia.descripcion)
             incidencia.latitud?.let { append("latitude", it.toString().take(10)) }
             incidencia.longitud?.let { append("longitude", it.toString().take(10)) }
+            incidencia.address?.let { if (it.isNotBlank()) append("address", it) }
             append("ocurred_at", ocurredAt)
 
             incidencia.imagenesPaths.forEachIndexed { index, path ->

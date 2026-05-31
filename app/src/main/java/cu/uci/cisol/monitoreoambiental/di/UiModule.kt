@@ -29,6 +29,7 @@ val uiModule = module {
     }
     viewModel {
         cu.uci.cisol.monitoreoambiental.ui.incidencia.DetalleIncidenciaViewModel(
+            androidContext(),
             get(),
             get(),
             get(),

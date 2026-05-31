@@ -1,5 +1,6 @@
 package cu.uci.cisol.monitoreoambiental.ui.incidencia
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -7,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.Localidad
 import cu.uci.cisol.monitoreoambiental.domain.model.Tematica
+import cu.uci.cisol.monitoreoambiental.data.work.IncidenciaSyncScheduler
 import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.LocalidadRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -85,6 +88,7 @@ sealed interface DetalleIncidenciaEvent {
 }
 
 class DetalleIncidenciaViewModel(
+    private val appContext: Context,
     savedStateHandle: SavedStateHandle,
     private val incidenciaRepository: IncidenciaRepository,
     private val tematicaRepository: TematicaRepository,
@@ -131,6 +135,9 @@ class DetalleIncidenciaViewModel(
         viewModelScope.launch {
             localidadRepository.observeLocalidades().collect { localidades ->
                 _state.update { it.copy(localidades = localidades) }
+                if (localidades.size == 1 && _state.value.localidadId == null) {
+                    onAction(DetalleIncidenciaAction.OnLocalidadChange(localidades.first().id))
+                }
             }
         }
     }
@@ -299,7 +306,7 @@ class DetalleIncidenciaViewModel(
                 }
             }
 
-            val result =
+            val result = withTimeoutOrNull(18000L) {
                 incidenciaRepository.actualizarRemoto(
                     id = remoteId,
                     theme = current.tematicaId!!,
@@ -314,18 +321,34 @@ class DetalleIncidenciaViewModel(
                     isActive = !current.marcadaResuelta,
                     language = current.language,
                 )
+            }
 
             _state.update { it.copy(isSaving = false) }
 
-            if (result.isSuccess) {
+            if (result != null && result.isSuccess) {
                 _events.send(DetalleIncidenciaEvent.ShowSnackbar("Incidencia actualizada"))
                 _events.send(DetalleIncidenciaEvent.NavigateBack)
             } else {
-                _events.send(
-                    DetalleIncidenciaEvent.ShowSnackbar(
-                        "Error al actualizar: ${result.exceptionOrNull()?.message}",
-                    ),
-                )
+                val local = incidenciaRepository.obtenerPorId(current.incidenciaId)
+                if (local != null) {
+                    val updatedLocal = local.copy(
+                        tematicaId = current.tematicaId!!,
+                        localidadId = current.localidadId,
+                        descripcion = current.descripcion,
+                        address = current.address.takeIf { it.isNotBlank() },
+                        latitud = current.latitud,
+                        longitud = current.longitud,
+                        imagenesPaths = local.imagenesPaths + evidencePaths,
+                        imagenResolucionPath = evidencePaths.firstOrNull() ?: local.imagenResolucionPath,
+                        assignedToId = current.assignedToId,
+                        isActive = !current.marcadaResuelta,
+                        sincronizado = false
+                    )
+                    incidenciaRepository.guardar(updatedLocal)
+                    IncidenciaSyncScheduler.enqueueUploadPending(appContext)
+                }
+                _events.send(DetalleIncidenciaEvent.ShowSnackbar("Guardada localmente. Se enviará cuando haya conexión."))
+                _events.send(DetalleIncidenciaEvent.NavigateBack)
             }
         }
     }

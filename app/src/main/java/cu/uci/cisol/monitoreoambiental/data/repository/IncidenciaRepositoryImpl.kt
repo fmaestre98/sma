@@ -74,25 +74,49 @@ class IncidenciaRepositoryImpl(
     }
 
     override suspend fun enviarAlServidor(incidencia: Incidencia): Result<Unit> {
-        val formParts = IncidenciaMultipartBuilder.buildCreateForm(context, incidencia)
-        return when (val result = managementApi.createIncidencia(formParts)) {
-            is NetworkResult.Success -> {
-                val response = result.data
-                withContext(Dispatchers.IO) {
-                    val updated =
-                        incidencia.copy(
-                            serverId = response.id,
-                            sincronizado = true,
-                            esBorrador = false,
-                        )
-                    incidenciaDao.insertar(updated.toEntity())
-                }
+        return if (incidencia.serverId != null) {
+            val result = actualizarRemoto(
+                id = incidencia.serverId,
+                theme = incidencia.tematicaId,
+                locality = incidencia.localidadId ?: "",
+                description = incidencia.descripcion,
+                address = incidencia.address,
+                latitude = incidencia.latitud,
+                longitude = incidencia.longitud,
+                occurredAt = incidencia.fechaHora,
+                evidences = incidencia.imagenesPaths.filter { it.startsWith("http") },
+                assignedTo = incidencia.assignedToId,
+                isActive = incidencia.isActive,
+                language = incidencia.language ?: "es"
+            )
+            if (result.isSuccess) {
                 kotlin.Result.success(Unit)
-            }
-            is NetworkResult.Error ->
+            } else {
                 kotlin.Result.failure(
-                    Exception("Error de red al enviar incidencia: ${result.error}"),
+                    Exception("Error de red al actualizar incidencia: ${result.exceptionOrNull()?.message}"),
                 )
+            }
+        } else {
+            val formParts = IncidenciaMultipartBuilder.buildCreateForm(context, incidencia)
+            when (val result = managementApi.createIncidencia(formParts)) {
+                is NetworkResult.Success -> {
+                    val response = result.data
+                    withContext(Dispatchers.IO) {
+                        val updated =
+                            incidencia.copy(
+                                serverId = response.id,
+                                sincronizado = true,
+                                esBorrador = false,
+                            )
+                        incidenciaDao.insertar(updated.toEntity())
+                    }
+                    kotlin.Result.success(Unit)
+                }
+                is NetworkResult.Error ->
+                    kotlin.Result.failure(
+                        Exception("Error de red al enviar incidencia: ${result.error}"),
+                    )
+            }
         }
     }
 

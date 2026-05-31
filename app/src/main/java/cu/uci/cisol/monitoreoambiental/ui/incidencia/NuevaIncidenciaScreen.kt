@@ -386,6 +386,19 @@ fun NuevaIncidenciaScreen(
                     )
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Dirección
+                OutlinedTextField(
+                    value = state.direccion,
+                    onValueChange = { onAction(NuevaIncidenciaAction.OnDireccionChange(it)) },
+                    label = { Text("Dirección") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AzulPrimario
+                    )
+                )
+
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = "Foto de evidencia",
@@ -472,41 +485,46 @@ fun NuevaIncidenciaScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 if (state.latitud != null && state.longitud != null) {
+                    val origen = state.ubicacionOrigen ?: "Previa"
                     Text(
-                        text = "Coordenadas: ${state.latitud}, ${state.longitud}",
+                        text = "Coordenadas ($origen): ${state.latitud}, ${state.longitud}",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                }
-
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Button(
-                        onClick = {
-                            if (locationPermissionState.status.isGranted) {
-                                onAction(NuevaIncidenciaAction.OnObtenerCoordenadas)
-                                // Simulando obtención de GPS
-                                onAction(NuevaIncidenciaAction.OnCoordenadasObtenidas(23.113592, -82.366592)) // TODO: Hook real FusedLocationProviderClient
-                            } else {
-                                locationPermissionState.launchPermissionRequest()
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = AzulClaro)
-                    ) {
-                        Icon(imageVector = Icons.Default.LocationOn, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("GPS")
+                    TextButton(onClick = { onAction(NuevaIncidenciaAction.OnLimpiarUbicacion) }) {
+                        Text("Limpiar Ubicación", color = Color.Red)
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = { onAction(NuevaIncidenciaAction.OnSeleccionarEnMapa) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AzulPrimario),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, AzulPrimario)
-                    ) {
-                        Icon(imageVector = Icons.Default.Map, contentDescription = null)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Mapa")
+                    Spacer(modifier = Modifier.height(8.dp))
+                } else {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = {
+                                if (locationPermissionState.status.isGranted) {
+                                    onAction(NuevaIncidenciaAction.OnObtenerCoordenadas)
+                                    // Simulando obtención de GPS
+                                    onAction(NuevaIncidenciaAction.OnCoordenadasObtenidas(23.113592, -82.366592)) // TODO: Hook real FusedLocationProviderClient
+                                } else {
+                                    locationPermissionState.launchPermissionRequest()
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = AzulClaro)
+                        ) {
+                            Icon(imageVector = Icons.Default.LocationOn, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("GPS")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = { onAction(NuevaIncidenciaAction.OnSeleccionarEnMapa) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AzulPrimario),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AzulPrimario)
+                        ) {
+                            Icon(imageVector = Icons.Default.Map, contentDescription = null)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Mapa")
+                        }
                     }
                 }
 

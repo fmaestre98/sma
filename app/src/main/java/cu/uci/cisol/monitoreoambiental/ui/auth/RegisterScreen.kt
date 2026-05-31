@@ -3,6 +3,7 @@ package cu.uci.cisol.monitoreoambiental.ui.auth
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -73,6 +74,7 @@ fun RegisterScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .safeDrawingPadding()
             .padding(24.dp)
             .imePadding()
             .verticalScroll(androidx.compose.foundation.rememberScrollState()),

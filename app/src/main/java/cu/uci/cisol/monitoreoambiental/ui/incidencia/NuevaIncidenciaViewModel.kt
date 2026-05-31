@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
 enum class FormMode { CREAR, EDITAR }
@@ -32,9 +33,11 @@ data class NuevaIncidenciaState(
     val localidadId: String? = null,
     val localidades: List<Localidad> = emptyList(),
     val descripcion: String = "",
+    val direccion: String = "",
     val imagenesUris: List<Uri> = emptyList(),
     val latitud: Double? = null,
     val longitud: Double? = null,
+    val ubicacionOrigen: String? = null,
     val obteniendoCoordenadas: Boolean = false,
     val modo: FormMode = FormMode.CREAR,
     val estadoId: String? = null,
@@ -65,6 +68,7 @@ sealed interface NuevaIncidenciaAction {
     data class OnTematicaChange(val tematicaId: String) : NuevaIncidenciaAction
     data class OnLocalidadChange(val localidadId: String) : NuevaIncidenciaAction
     data class OnDescripcionChange(val descripcion: String) : NuevaIncidenciaAction
+    data class OnDireccionChange(val direccion: String) : NuevaIncidenciaAction
     data class OnFotoTomada(val uri: Uri?) : NuevaIncidenciaAction
     data class OnFotoSeleccionada(val uris: List<Uri>) : NuevaIncidenciaAction
     data class OnFotoEliminada(val uri: Uri) : NuevaIncidenciaAction
@@ -75,6 +79,7 @@ sealed interface NuevaIncidenciaAction {
     object OnSeleccionarEnMapa : NuevaIncidenciaAction
     object OnCerrarMapa : NuevaIncidenciaAction
     data class OnMapLocationSelected(val lat: Double, val lng: Double) : NuevaIncidenciaAction
+    object OnLimpiarUbicacion : NuevaIncidenciaAction
     object OnGuardarBorrador : NuevaIncidenciaAction
     object OnEnviarAlServidor : NuevaIncidenciaAction
     object OnMarcarComoResuelta : NuevaIncidenciaAction
@@ -131,6 +136,9 @@ class NuevaIncidenciaViewModel(
         viewModelScope.launch {
             localidadRepository.observeLocalidades().collect { localidades ->
                 _state.update { it.copy(localidades = localidades) }
+                if (localidades.size == 1 && _state.value.localidadId == null) {
+                    onAction(NuevaIncidenciaAction.OnLocalidadChange(localidades.first().id))
+                }
             }
         }
     }
@@ -154,6 +162,7 @@ class NuevaIncidenciaViewModel(
                         tematicaId = incidencia.tematicaId,
                         localidadId = incidencia.localidadId,
                         descripcion = incidencia.descripcion,
+                        direccion = incidencia.address ?: "",
                         imagenesUris = incidencia.imagenesPaths.map { Uri.parse(it) },
                         imagenResolucionUri =
                             incidencia.imagenResolucionPath?.let { path -> Uri.parse(path) },
@@ -183,6 +192,9 @@ class NuevaIncidenciaViewModel(
             }
             is NuevaIncidenciaAction.OnDescripcionChange -> {
                 _state.update { it.copy(descripcion = action.descripcion) }
+            }
+            is NuevaIncidenciaAction.OnDireccionChange -> {
+                _state.update { it.copy(direccion = action.direccion) }
             }
             is NuevaIncidenciaAction.OnFotoTomada -> {
                 if (action.uri != null && _state.value.imagenesUris.size < 5) {
@@ -215,6 +227,7 @@ class NuevaIncidenciaViewModel(
                     it.copy(
                         latitud = latitud,
                         longitud = longitud,
+                        ubicacionOrigen = "GPS",
                         obteniendoCoordenadas = false,
                     )
                 }
@@ -238,7 +251,17 @@ class NuevaIncidenciaViewModel(
                     it.copy(
                         latitud = latitud,
                         longitud = longitud,
+                        ubicacionOrigen = "Mapa",
                         showMapDialog = false,
+                    )
+                }
+            }
+            is NuevaIncidenciaAction.OnLimpiarUbicacion -> {
+                _state.update {
+                    it.copy(
+                        latitud = null,
+                        longitud = null,
+                        ubicacionOrigen = null,
                     )
                 }
             }
@@ -256,9 +279,16 @@ class NuevaIncidenciaViewModel(
 
     private fun guardar(esBorradorFinal: Boolean) {
         val currentState = _state.value
-        if (currentState.tematicaId == null || currentState.descripcion.isBlank()) {
+        if (currentState.tematicaId == null || currentState.descripcion.isBlank() || currentState.direccion.isBlank()) {
             viewModelScope.launch {
-                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Por favor complete temática y descripción"))
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Por favor complete temática, descripción y dirección"))
+            }
+            return
+        }
+
+        if (currentState.imagenesUris.isEmpty()) {
+            viewModelScope.launch {
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Por favor agregue al menos una foto de evidencia"))
             }
             return
         }
@@ -294,6 +324,7 @@ class NuevaIncidenciaViewModel(
                         tematicaId = currentState.tematicaId!!,
                         localidadId = currentState.localidadId,
                         descripcion = currentState.descripcion,
+                        address = currentState.direccion,
                         imagenesPaths = currentState.imagenesUris.map { it.toString() },
                         imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
                         latitud = currentState.latitud,
@@ -315,8 +346,10 @@ class NuevaIncidenciaViewModel(
                 }
 
                 if (!esBorradorFinal) {
-                    val sendResult = incidenciaRepository.enviarAlServidor(incidencia)
-                    if (sendResult.isFailure) {
+                    val sendResult = withTimeoutOrNull(18000L) {
+                        incidenciaRepository.enviarAlServidor(incidencia)
+                    }
+                    if (sendResult == null || sendResult.isFailure) {
                         IncidenciaSyncScheduler.enqueueUploadPending(appContext)
                         _events.send(
                             NuevaIncidenciaEvent.ShowSnackbar(

@@ -1,9 +1,11 @@
 package cu.uci.cisol.monitoreoambiental
 
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,13 +20,17 @@ import cu.uci.cisol.monitoreoambiental.ui.home.HomeScreen
 import cu.uci.cisol.monitoreoambiental.ui.home.HomeViewModel
 import cu.uci.cisol.monitoreoambiental.ui.theme.MonitoreoAmbientalTheme
 import org.koin.androidx.compose.koinViewModel
-import androidx.compose.foundation.layout.padding
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Prevent system from adding translucent nav bar background
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
         setContent {
             MonitoreoAmbientalTheme {
                 val navController = rememberNavController()
@@ -38,12 +44,12 @@ class MainActivity : ComponentActivity() {
                     val startDestination = if (isSessionActive == true) "home" else "login"
 
                     androidx.compose.material3.Scaffold(
-                        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) }
-                    ) { padding ->
+                        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+                    ) { _ ->
                         NavHost(
                             navController = navController, 
-                            startDestination = startDestination,
-                            modifier = androidx.compose.ui.Modifier.padding(padding)
+                            startDestination = startDestination
                         ) {
                             composable("login") {
                                 LoginScreen(
