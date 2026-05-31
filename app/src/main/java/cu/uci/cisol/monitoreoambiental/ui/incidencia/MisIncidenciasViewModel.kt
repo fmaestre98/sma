@@ -34,6 +34,7 @@ data class IncidenciaUi(
     val esBorrador: Boolean,
     val sincronizado: Boolean,
     val horaFormateada: String,
+    val fechaFormateadaCompleta: String = "",
     val fechaAbsoluta: Long,
 )
 
@@ -81,6 +82,7 @@ class MisIncidenciasViewModel(
 
     private val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale("es", "ES"))
     private val timeFormatter = SimpleDateFormat("hh:mm a", Locale("es", "ES"))
+    private val fechaCompletaFormatter = SimpleDateFormat("dd/MM/yy - hh:mm a", Locale("es", "ES"))
 
     init {
         val initialFilter =
@@ -199,6 +201,7 @@ class MisIncidenciasViewModel(
             esBorrador = esBorrador,
             sincronizado = sincronizado,
             horaFormateada = timeFormatter.format(date),
+            fechaFormateadaCompleta = fechaCompletaFormatter.format(date),
             fechaAbsoluta = fechaHora,
         )
     }

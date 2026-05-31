@@ -97,6 +97,13 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onLogout = {
                                     homeViewModel.logout()
+                                },
+                                onNavigateToDetail = { id, esBorrador ->
+                                    if (esBorrador) {
+                                        navController.navigate("nueva_incidencia?incidenciaId=$id")
+                                    } else {
+                                        navController.navigate("detalle_incidencia?incidenciaId=$id")
+                                    }
                                 }
                             )
                         }
