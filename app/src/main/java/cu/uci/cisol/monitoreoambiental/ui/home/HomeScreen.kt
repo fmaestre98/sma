@@ -170,7 +170,8 @@ fun HomeScreen(
                             HomeIncidenciaCard(
                                 incidencia = incidencia,
                                 onClick = {
-                                    onNavigateToDetail(incidencia.id, incidencia.esBorrador)
+                                    onNavigateToDetail(incidencia.id, incidencia.esBorrador ||
+                                            (!incidencia.sincronizado && incidencia.serverId == null))
                                 },
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                             )

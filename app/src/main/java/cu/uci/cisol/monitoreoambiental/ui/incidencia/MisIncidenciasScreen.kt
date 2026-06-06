@@ -217,7 +217,8 @@ fun MisIncidenciasScreen(
                         items(incidencias, key = { it.id }) { incidencia ->
                             IncidenciaCard(
                                 incidencia = incidencia,
-                                onClick = { onNavigateToDetail(incidencia.id, incidencia.esBorrador) }
+                                onClick = { onNavigateToDetail(incidencia.id, incidencia.esBorrador ||
+                                        (!incidencia.sincronizado && incidencia.serverId == null)) }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                         }

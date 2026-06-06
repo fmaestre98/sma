@@ -24,6 +24,7 @@ import java.util.Locale
 
 data class IncidenciaUi(
     val id: String,
+    val serverId: String?,
     val tematica: String,
     val tematicaColor: String?,
     val descripcionCorta: String,
@@ -191,6 +192,7 @@ class MisIncidenciasViewModel(
 
         return IncidenciaUi(
             id = id,
+            serverId = serverId,
             tematica = themeName ?: tematicaMap[tematicaId]?.name ?: tematicaId,
             tematicaColor = themeColor ?: "#64748b",
             descripcionCorta = if (descripcion.length > 80) "${descripcion.take(80)}..." else descripcion,

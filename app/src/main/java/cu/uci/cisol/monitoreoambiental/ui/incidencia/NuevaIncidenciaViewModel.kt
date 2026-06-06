@@ -170,7 +170,7 @@ class NuevaIncidenciaViewModel(
                         longitud = incidencia.longitud,
                         modo = FormMode.EDITAR,
                         estadoId = incidencia.estadoId,
-                        esBorrador = incidencia.esBorrador,
+                        esBorrador = incidencia.esBorrador || (!incidencia.sincronizado && incidencia.serverId == null),
                         isLoading = false,
                     )
                 }
@@ -198,15 +198,22 @@ class NuevaIncidenciaViewModel(
             }
             is NuevaIncidenciaAction.OnFotoTomada -> {
                 if (action.uri != null && _state.value.imagenesUris.size < 5) {
-                    _state.update { it.copy(imagenesUris = it.imagenesUris + action.uri) }
+                    viewModelScope.launch {
+                        val savedUri = copyUriToInternalStorage(appContext, action.uri)
+                        _state.update { it.copy(imagenesUris = it.imagenesUris + savedUri) }
+                    }
                 }
             }
             is NuevaIncidenciaAction.OnFotoSeleccionada -> {
-                val current = _state.value.imagenesUris
-                val availableSpace = 5 - current.size
-                if (availableSpace > 0) {
-                    val newUris = action.uris.take(availableSpace)
-                    _state.update { it.copy(imagenesUris = current + newUris) }
+                viewModelScope.launch {
+                    val current = _state.value.imagenesUris
+                    val availableSpace = 5 - current.size
+                    if (availableSpace > 0) {
+                        val newUris = action.uris.take(availableSpace).map { 
+                            copyUriToInternalStorage(appContext, it) 
+                        }
+                        _state.update { it.copy(imagenesUris = current + newUris) }
+                    }
                 }
             }
             is NuevaIncidenciaAction.OnFotoEliminada -> {
@@ -214,7 +221,10 @@ class NuevaIncidenciaViewModel(
             }
             is NuevaIncidenciaAction.OnFotoResolucionTomada -> {
                 if (action.uri != null) {
-                    _state.update { it.copy(imagenResolucionUri = action.uri) }
+                    viewModelScope.launch {
+                        val savedUri = copyUriToInternalStorage(appContext, action.uri)
+                        _state.update { it.copy(imagenResolucionUri = savedUri) }
+                    }
                 }
             }
             is NuevaIncidenciaAction.OnObtenerCoordenadas -> {
@@ -289,6 +299,13 @@ class NuevaIncidenciaViewModel(
         if (currentState.imagenesUris.isEmpty()) {
             viewModelScope.launch {
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Por favor agregue al menos una foto de evidencia"))
+            }
+            return
+        }
+
+        if (currentState.longitud == null || currentState.latitud == null) {
+            viewModelScope.launch {
+                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Por favor agregue las coordenadas por el GPS o el mapa"))
             }
             return
         }
@@ -398,6 +415,22 @@ class NuevaIncidenciaViewModel(
                 _state.update { it.copy(isLoading = false) }
                 _events.send(NuevaIncidenciaEvent.ShowSnackbar("Error al marcar como resuelta"))
             }
+        }
+    }
+    private suspend fun copyUriToInternalStorage(context: Context, uri: Uri): Uri = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (uri.scheme == "file") return@withContext uri
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext uri
+            val fileName = "img_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().take(4)}.jpg"
+            val dir = java.io.File(context.filesDir, "incidencias_images")
+            if (!dir.exists()) dir.mkdirs()
+            val file = java.io.File(dir, fileName)
+            java.io.FileOutputStream(file).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+            Uri.fromFile(file)
+        } catch (e: Exception) {
+            uri
         }
     }
 }

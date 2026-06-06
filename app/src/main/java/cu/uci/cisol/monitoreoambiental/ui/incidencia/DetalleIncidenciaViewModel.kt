@@ -48,6 +48,7 @@ data class DetalleIncidenciaState(
     val marcadaResuelta: Boolean = false,
     val assignedToId: String? = null,
     val language: String = "es",
+    val imagenesUris: List<Uri> = emptyList(),
     val evidenciasResolucionUris: List<Uri> = emptyList(),
     val tematicas: List<Tematica> = emptyList(),
     val localidades: List<Localidad> = emptyList(),
@@ -192,6 +193,7 @@ class DetalleIncidenciaViewModel(
                 marcadaResuelta = !incidencia.isActive,
                 assignedToId = incidencia.assignedToId,
                 language = incidencia.language ?: "es",
+                imagenesUris = incidencia.imagenesPaths.map { Uri.parse(it) },
             )
         }
     }
@@ -215,17 +217,24 @@ class DetalleIncidenciaViewModel(
             }
             is DetalleIncidenciaAction.OnFotoTomada -> {
                 if (action.uri != null && _state.value.evidenciasResolucionUris.size < 2) {
-                    _state.update {
-                        it.copy(evidenciasResolucionUris = it.evidenciasResolucionUris + action.uri)
+                    viewModelScope.launch {
+                        val savedUri = copyUriToInternalStorage(appContext, action.uri)
+                        _state.update {
+                            it.copy(evidenciasResolucionUris = it.evidenciasResolucionUris + savedUri)
+                        }
                     }
                 }
             }
             is DetalleIncidenciaAction.OnFotoSeleccionada -> {
-                val current = _state.value.evidenciasResolucionUris
-                val available = 2 - current.size
-                if (available > 0) {
-                    val newUris = action.uris.take(available)
-                    _state.update { it.copy(evidenciasResolucionUris = current + newUris) }
+                viewModelScope.launch {
+                    val current = _state.value.evidenciasResolucionUris
+                    val available = 2 - current.size
+                    if (available > 0) {
+                        val newUris = action.uris.take(available).map {
+                            copyUriToInternalStorage(appContext, it)
+                        }
+                        _state.update { it.copy(evidenciasResolucionUris = current + newUris) }
+                    }
                 }
             }
             is DetalleIncidenciaAction.OnFotoEliminada -> {
@@ -350,6 +359,22 @@ class DetalleIncidenciaViewModel(
                 _events.send(DetalleIncidenciaEvent.ShowSnackbar("Guardada localmente. Se enviará cuando haya conexión."))
                 _events.send(DetalleIncidenciaEvent.NavigateBack)
             }
+        }
+    }
+    private suspend fun copyUriToInternalStorage(context: Context, uri: Uri): Uri = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        if (uri.scheme == "file") return@withContext uri
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri) ?: return@withContext uri
+            val fileName = "img_${System.currentTimeMillis()}_${java.util.UUID.randomUUID().toString().take(4)}.jpg"
+            val dir = java.io.File(context.filesDir, "incidencias_images")
+            if (!dir.exists()) dir.mkdirs()
+            val file = java.io.File(dir, fileName)
+            java.io.FileOutputStream(file).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+            Uri.fromFile(file)
+        } catch (e: Exception) {
+            uri
         }
     }
 }

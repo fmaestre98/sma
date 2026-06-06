@@ -414,6 +414,7 @@ class HomeViewModel(
 
         return IncidenciaUi(
             id = id,
+            serverId = serverId,
             tematica = themeName ?: tematicaMap[tematicaId]?.name ?: tematicaId,
             tematicaColor = themeColor ?: "#64748b",
             descripcionCorta = if (descripcion.length > 80) "${descripcion.take(80)}..." else descripcion,
