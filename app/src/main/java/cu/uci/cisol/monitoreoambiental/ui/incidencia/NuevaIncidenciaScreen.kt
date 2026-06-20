@@ -55,8 +55,16 @@ import org.mapsforge.map.layer.cache.TileCache
 import org.mapsforge.map.layer.renderer.TileRendererLayer
 import org.mapsforge.map.reader.MapFile
 import android.app.Application
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import org.mapsforge.map.rendertheme.InternalRenderTheme
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +107,9 @@ fun NuevaIncidenciaScreen(
 
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
     var photoUri by remember { mutableStateOf<Uri?>(null) }
-    
+    var showDateTimePicker by remember { mutableStateOf(false) }
+    val dateFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+
     val takePictureLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
@@ -232,6 +242,83 @@ fun NuevaIncidenciaScreen(
                 }
             }
         )
+    }
+
+    if (showDateTimePicker) {
+        Dialog(
+            onDismissRequest = { showDateTimePicker = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)   // ← permite crecer
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .fillMaxWidth()            // se estira al máximo posible del diálogo
+                    .wrapContentHeight()
+                    .widthIn(max = 480.dp)     // límite para pantallas grandes
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {                    Text(
+                        text = "Seleccionar fecha y hora",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    val datePickerState = rememberDatePickerState(
+                        initialSelectedDateMillis = state.fechaHora
+                    )
+                    DatePicker(
+                        state = datePickerState,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    val timePickerState = rememberTimePickerState(
+                        initialHour = Calendar.getInstance().apply { timeInMillis = state.fechaHora }
+                            .get(Calendar.HOUR_OF_DAY),
+                        initialMinute = Calendar.getInstance().apply { timeInMillis = state.fechaHora }
+                            .get(Calendar.MINUTE)
+                    )
+                    TimePicker(
+                        state = timePickerState,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showDateTimePicker = false }) {
+                            Text("Cancelar")
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(
+                            onClick = {
+                                val selectedDate = datePickerState.selectedDateMillis ?: state.fechaHora
+                                val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
+                                calendar.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                                calendar.set(Calendar.MINUTE, timePickerState.minute)
+                                calendar.set(Calendar.SECOND, 0)
+                                calendar.set(Calendar.MILLISECOND, 0)
+                                onAction(NuevaIncidenciaAction.OnFechaHoraChange(calendar.timeInMillis))
+                                showDateTimePicker = false
+                            }
+                        ) {
+                            Text("Aceptar")
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Scaffold(
@@ -399,6 +486,43 @@ fun NuevaIncidenciaScreen(
                     )
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showDateTimePicker = true }
+                ) {
+                    // Colores "falsos" para que parezca habilitado
+                    val dateFieldColors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AzulPrimario,
+                        unfocusedBorderColor = AzulPrimario,
+                        disabledBorderColor = AzulPrimario,
+                        focusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        focusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+
+                    OutlinedTextField(
+                        value = dateFormatter.format(Date(state.fechaHora)),
+                        onValueChange = {},
+                        readOnly = true,
+                        enabled = false,                        // ← deshabilitado
+                        label = { Text("Fecha y hora") },
+                        trailingIcon = {
+                            Icon(Icons.Default.DateRange, contentDescription = "Seleccionar fecha")
+                        },
+                        colors = dateFieldColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
                     text = "Foto de evidencia",
@@ -410,7 +534,9 @@ fun NuevaIncidenciaScreen(
                 // Foto button and preview
                 if (state.imagenesUris.isNotEmpty()) {
                     LazyRow(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(state.imagenesUris) { uri ->
@@ -429,7 +555,10 @@ fun NuevaIncidenciaScreen(
                                         .align(Alignment.TopEnd)
                                         .padding(4.dp)
                                         .size(24.dp)
-                                        .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                        .background(
+                                            Color.Black.copy(alpha = 0.5f),
+                                            RoundedCornerShape(12.dp)
+                                        )
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Close,

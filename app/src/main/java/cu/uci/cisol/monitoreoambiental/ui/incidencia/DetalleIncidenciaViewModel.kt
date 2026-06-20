@@ -37,7 +37,6 @@ data class DetalleIncidenciaState(
     val themeName: String? = null,
     val localityName: String? = null,
     val updatedAt: String? = null,
-    val fechaHora: Long = 0L,
     val fechaFormateada: String = "",
     val tematicaId: String? = null,
     val localidadId: String? = null,
@@ -57,6 +56,7 @@ data class DetalleIncidenciaState(
     val showMapDialog: Boolean = false,
     val obteniendoCoordenadas: Boolean = false,
     val error: String? = null,
+    val fechaHora: Long = System.currentTimeMillis(),
 ) {
     val selectedTematica: Tematica?
         get() = tematicas.firstOrNull { it.id == tematicaId }
@@ -81,6 +81,8 @@ sealed interface DetalleIncidenciaAction {
     object OnCerrarMapa : DetalleIncidenciaAction
     data class OnMapLocationSelected(val lat: Double, val lng: Double) : DetalleIncidenciaAction
     object OnGuardar : DetalleIncidenciaAction
+
+    data class OnFechaHoraChange(val fechaHora: Long) : DetalleIncidenciaAction
 }
 
 sealed interface DetalleIncidenciaEvent {
@@ -146,8 +148,9 @@ class DetalleIncidenciaViewModel(
     private fun cargarIncidencia(id: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-
+            println("my-logs cargarIncidencia $id")
             val local = incidenciaRepository.obtenerPorId(id)
+            println("my-logs local $local")
             if (local != null) {
                 applyIncidencia(local)
             } else {
@@ -156,20 +159,22 @@ class DetalleIncidenciaViewModel(
                 _events.send(DetalleIncidenciaEvent.NavigateBack)
                 return@launch
             }
-
+            println("my-logs cargarIncidencia before sincronizar")
             val syncResult = incidenciaRepository.sincronizarDetalle(id)
+            println("my-logs cargarIncidencia after sincronizar $syncResult")
             if (syncResult.isSuccess) {
                 incidenciaRepository.obtenerPorId(id)?.let { applyIncidencia(it) }
             }
-
+            println("my-logs cargarIncidencia before isLoading false")
             _state.update { it.copy(isLoading = false) }
         }
     }
 
     private fun applyIncidencia(incidencia: Incidencia) {
-        fechaHoraOriginal = incidencia.fechaHora
+        val fechaFormateada = dateFormatter.format(Date(incidencia.fechaHora))
         _state.update {
             it.copy(
+                isLoading = false,
                 incidenciaId = incidencia.id,
                 serverId = incidencia.serverId,
                 ticketNumber = incidencia.ticketNumber,
@@ -183,7 +188,7 @@ class DetalleIncidenciaViewModel(
                 localityName = incidencia.localityName,
                 updatedAt = incidencia.updatedAt,
                 fechaHora = incidencia.fechaHora,
-                fechaFormateada = dateFormatter.format(Date(incidencia.fechaHora)),
+                fechaFormateada = fechaFormateada,
                 tematicaId = incidencia.tematicaId,
                 localidadId = incidencia.localidadId,
                 descripcion = incidencia.descripcion,
@@ -274,6 +279,9 @@ class DetalleIncidenciaViewModel(
                         showMapDialog = false,
                     )
                 }
+            }
+            is DetalleIncidenciaAction.OnFechaHoraChange -> {
+                _state.update { it.copy(fechaHora = action.fechaHora) }
             }
             DetalleIncidenciaAction.OnGuardar -> guardar()
         }

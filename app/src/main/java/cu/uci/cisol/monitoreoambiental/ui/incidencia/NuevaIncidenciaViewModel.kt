@@ -39,6 +39,7 @@ data class NuevaIncidenciaState(
     val longitud: Double? = null,
     val ubicacionOrigen: String? = null,
     val obteniendoCoordenadas: Boolean = false,
+    val fechaHora: Long = System.currentTimeMillis(),
     val modo: FormMode = FormMode.CREAR,
     val estadoId: String? = null,
     val esBorrador: Boolean = true,
@@ -83,6 +84,8 @@ sealed interface NuevaIncidenciaAction {
     object OnGuardarBorrador : NuevaIncidenciaAction
     object OnEnviarAlServidor : NuevaIncidenciaAction
     object OnMarcarComoResuelta : NuevaIncidenciaAction
+
+    data class OnFechaHoraChange(val fechaHora: Long) : NuevaIncidenciaAction
 }
 
 sealed interface NuevaIncidenciaEvent {
@@ -283,6 +286,9 @@ class NuevaIncidenciaViewModel(
             }
             is NuevaIncidenciaAction.OnMarcarComoResuelta -> {
                 marcarResuelta()
+            }
+            is NuevaIncidenciaAction.OnFechaHoraChange -> {
+                _state.update { it.copy(fechaHora = action.fechaHora) }
             }
         }
     }
