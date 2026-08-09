@@ -2,6 +2,7 @@ package cu.uci.cisol.monitoreoambiental.ui.home.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,7 @@ fun HomeHeader(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onMenuClick: () -> Unit,
+    onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -77,7 +79,8 @@ fun HomeHeader(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(Color.White)
+                    .clickable(onClick = onProfileClick),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

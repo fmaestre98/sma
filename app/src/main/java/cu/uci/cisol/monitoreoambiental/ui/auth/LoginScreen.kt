@@ -1,7 +1,6 @@
 package cu.uci.cisol.monitoreoambiental.ui.auth
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -9,12 +8,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -48,7 +48,7 @@ fun LoginScreen(
                     snackbarHostState.showSnackbar(event.message.asString(context))
                 }
                 is AuthEvent.ShowSnackbar -> {
-                    snackbarHostState.showSnackbar(event.message.asString(context))
+                    snackbarHostState.showSnackbar(event.message.asString(context), duration = SnackbarDuration.Long)
                 }
                 is AuthEvent.RegisterSuccess -> {
                     snackbarHostState.showSnackbar(event.message.asString(context))
@@ -57,7 +57,7 @@ fun LoginScreen(
         }
     }
 
-    // Determine what to show
+    // Conflict resolution dialog
     if (state.isResolvingConflict) {
         ConflictResolutionDialog(
             sessions = state.conflictSessions,
@@ -66,6 +66,18 @@ fun LoginScreen(
             onConfirm = { viewModel.onAction(AuthAction.SubmitConflictResolution) },
             onDismiss = { viewModel.onAction(AuthAction.CancelConflictResolution) },
             isLoading = state.isLoading
+        )
+    }
+
+    // Password reset dialog
+    if (state.showPasswordResetDialog) {
+        PasswordResetDialog(
+            email = state.passwordResetEmail,
+            emailError = state.passwordResetEmailError?.asString(context),
+            isLoading = state.isPasswordResetLoading,
+            onEmailChange = { viewModel.onAction(AuthAction.OnPasswordResetEmailChange(it)) },
+            onConfirm = { viewModel.onAction(AuthAction.SubmitPasswordReset) },
+            onDismiss = { viewModel.onAction(AuthAction.DismissPasswordResetDialog) }
         )
     }
 
@@ -144,7 +156,21 @@ fun LoginScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Forgot password link
+        TextButton(
+            onClick = { viewModel.onAction(AuthAction.ShowPasswordResetDialog) },
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text(
+                text = "¿Olvidó su contraseña?",
+                color = Color(0xFF123C78),
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = { viewModel.onAction(AuthAction.SubmitLogin) },
@@ -173,6 +199,82 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.weight(1f))
     }
+}
+
+@Composable
+fun PasswordResetDialog(
+    email: String,
+    emailError: String?,
+    isLoading: Boolean,
+    onEmailChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isLoading) onDismiss() },
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Email,
+                contentDescription = null,
+                tint = Color(0xFF123C78)
+            )
+        },
+        title = {
+            Text(
+                text = "Recuperar contraseña",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Ingrese su correo electrónico y le enviaremos un enlace para restablecer su contraseña.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Start
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Correo electrónico") },
+                    placeholder = { Text("ejemplo@correo.com") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    isError = emailError != null,
+                    enabled = !isLoading,
+                    supportingText = if (emailError != null) {
+                        { Text(emailError, color = MaterialTheme.colorScheme.error) }
+                    } else null
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isLoading,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF123C78)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Enviar enlace")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isLoading) {
+                Text("Cancelar", color = Color(0xFF123C78))
+            }
+        }
+    )
 }
 
 @Composable

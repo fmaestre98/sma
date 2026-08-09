@@ -6,19 +6,25 @@ import cu.uci.cisol.monitoreoambiental.ui.util.UiText
 data class AuthState(
     val isLoading: Boolean = false,
     val isLoginMode: Boolean = true,
-    
+
     // Form fields
     val email: String = "",
     val password: String = "",
     val firstName: String = "",
     val lastName: String = "",
     val username: String = "",
-    
+
     // Conflict handling
     val conflictSessions: List<Session> = emptyList(),
     val isResolvingConflict: Boolean = false,
     val selectedSessionIds: Set<String> = emptySet(),
-    
+
+    // Password reset dialog
+    val showPasswordResetDialog: Boolean = false,
+    val passwordResetEmail: String = "",
+    val passwordResetEmailError: UiText? = null,
+    val isPasswordResetLoading: Boolean = false,
+
     // Error
     val error: UiText? = null
 )
@@ -29,13 +35,19 @@ sealed interface AuthAction {
     data class OnFirstNameChange(val name: String) : AuthAction
     data class OnLastNameChange(val name: String) : AuthAction
     data class OnUsernameChange(val username: String) : AuthAction
-    
+
     object SubmitLogin : AuthAction
     object SubmitRegister : AuthAction
-    
+
     data class OnSessionSelected(val sessionId: String, val selected: Boolean) : AuthAction
     object SubmitConflictResolution : AuthAction
     object CancelConflictResolution : AuthAction
+
+    // Password reset actions
+    object ShowPasswordResetDialog : AuthAction
+    object DismissPasswordResetDialog : AuthAction
+    data class OnPasswordResetEmailChange(val email: String) : AuthAction
+    object SubmitPasswordReset : AuthAction
 }
 
 sealed interface AuthEvent {

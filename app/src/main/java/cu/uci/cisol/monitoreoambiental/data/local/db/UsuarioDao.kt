@@ -7,6 +7,7 @@ import cu.uci.cisol.monitoreoambiental.data.local.entity.UsuarioEntity
 interface UsuarioDao {
 
     @Query("SELECT * FROM usuarios LIMIT 1") fun obtener(): UsuarioEntity?
+    @Query("SELECT * FROM usuarios LIMIT 1") fun obtenerFlow(): kotlinx.coroutines.flow.Flow<UsuarioEntity?>
 
     @Upsert fun guardar(usuario: UsuarioEntity)
 

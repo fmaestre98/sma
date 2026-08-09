@@ -74,6 +74,17 @@ class AuthViewModel(
                 _state.update { it.copy(isResolvingConflict = false, conflictSessions = emptyList(), selectedSessionIds = emptySet()) }
             }
             AuthAction.SubmitConflictResolution -> resolveConflict()
+            // Password reset
+            AuthAction.ShowPasswordResetDialog -> {
+                _state.update { it.copy(showPasswordResetDialog = true, passwordResetEmail = "", passwordResetEmailError = null) }
+            }
+            AuthAction.DismissPasswordResetDialog -> {
+                _state.update { it.copy(showPasswordResetDialog = false, passwordResetEmail = "", passwordResetEmailError = null) }
+            }
+            is AuthAction.OnPasswordResetEmailChange -> {
+                _state.update { it.copy(passwordResetEmail = action.email, passwordResetEmailError = null) }
+            }
+            AuthAction.SubmitPasswordReset -> submitPasswordReset()
         }
     }
 
@@ -142,17 +153,17 @@ class AuthViewModel(
         viewModelScope.launch {
             val currentState = _state.value
             if (currentState.selectedSessionIds.isEmpty()) return@launch
-            
+
             _state.update { it.copy(isLoading = true) }
-            
+
             val credentials = AuthCredentials(currentState.email, currentState.password)
             val result = authRepository.terminateSessions(credentials, currentState.selectedSessionIds.toList())
-            
+
             _state.update { it.copy(isLoading = false) }
-            
+
             when (result) {
                 is Result.Success -> {
-                    _state.update { 
+                    _state.update {
                         it.copy(
                             isResolvingConflict = false,
                             conflictSessions = emptyList(),
@@ -165,6 +176,31 @@ class AuthViewModel(
                 }
                 is Result.Error -> {
                     _state.update { it.copy(error = result.error.toUiText()) }
+                    _events.send(AuthEvent.ShowSnackbar(result.error.toUiText()))
+                }
+            }
+        }
+    }
+
+    private fun submitPasswordReset() {
+        val email = _state.value.passwordResetEmail.trim()
+        if (email.isBlank()) {
+            _state.update { it.copy(passwordResetEmailError = UiText.DynamicString("Por favor ingrese su correo")) }
+            return
+        }
+        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            _state.update { it.copy(passwordResetEmailError = UiText.DynamicString("Ingrese un correo electrónico válido")) }
+            return
+        }
+        viewModelScope.launch {
+            _state.update { it.copy(isPasswordResetLoading = true, passwordResetEmailError = null) }
+            when (val result = authRepository.requestPasswordReset(email)) {
+                is Result.Success -> {
+                    _state.update { it.copy(isPasswordResetLoading = false, showPasswordResetDialog = false, passwordResetEmail = "") }
+                    _events.send(AuthEvent.ShowSnackbar(UiText.DynamicString("Si el email existe, se ha enviado un enlace de recuperación.")))
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(isPasswordResetLoading = false) }
                     _events.send(AuthEvent.ShowSnackbar(result.error.toUiText()))
                 }
             }

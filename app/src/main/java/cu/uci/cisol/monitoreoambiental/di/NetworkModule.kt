@@ -123,6 +123,7 @@ val networkModule = module {
     }
 
     single { cu.uci.cisol.monitoreoambiental.data.remote.AuthApi(get()) }
+    single { cu.uci.cisol.monitoreoambiental.data.remote.UsersApi(get()) }
     single { cu.uci.cisol.monitoreoambiental.data.remote.ManagementApi(get()) }
     single { cu.uci.cisol.monitoreoambiental.data.remote.LocationsApi(get()) }
 }

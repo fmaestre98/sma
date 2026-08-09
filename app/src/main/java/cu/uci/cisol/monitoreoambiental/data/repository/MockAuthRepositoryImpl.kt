@@ -39,4 +39,9 @@ class MockAuthRepositoryImpl : AuthRepository {
         delay(1000)
         return Result.Success(Unit)
     }
+
+    override suspend fun requestPasswordReset(email: String): EmptyResult<AuthError> {
+        delay(1000)
+        return Result.Success(Unit)
+    }
 }

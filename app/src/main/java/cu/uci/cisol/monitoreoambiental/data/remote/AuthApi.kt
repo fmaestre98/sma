@@ -14,6 +14,7 @@ class AuthApi(private val client: HttpClient) {
 
     companion object {
         const val BASE_URL = "${ApiConfig.BASE_URL}/auth"
+        const val USERS_BASE_URL = "${ApiConfig.BASE_URL}/api/v1/users"
     }
 
     suspend fun login(request: LoginRequestDto): io.ktor.client.statement.HttpResponse {
@@ -33,5 +34,9 @@ class AuthApi(private val client: HttpClient) {
     
     suspend fun terminateSessions(request: TerminateSessionsRequestDto): Result<MessageResponseDto, DataError.Network> {
         return client.postSafe("$BASE_URL/token/terminate-sessions/", request)
+    }
+
+    suspend fun requestPasswordReset(request: PasswordResetRequestDto): Result<MessageResponseDto, DataError.Network> {
+        return client.postSafe("$USERS_BASE_URL/request-password-reset/", request)
     }
 }

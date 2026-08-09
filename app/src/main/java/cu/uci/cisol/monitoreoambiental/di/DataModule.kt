@@ -1,11 +1,9 @@
 package cu.uci.cisol.monitoreoambiental.di
 
+import UsuarioRepositoryImpl
 import androidx.room.Room
 import cu.uci.cisol.monitoreoambiental.data.local.db.MonitoreoDatabase
 import cu.uci.cisol.monitoreoambiental.data.repository.IncidenciaRepositoryImpl
-import cu.uci.cisol.monitoreoambiental.data.repository.UsuarioRepositoryImpl
-import cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository
-import cu.uci.cisol.monitoreoambiental.domain.repository.UsuarioRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -25,13 +23,14 @@ val dataModule = module {
     single { get<MonitoreoDatabase>().tematicaDao }
     single { get<MonitoreoDatabase>().estadoDao }
     single { get<MonitoreoDatabase>().localidadDao }
+    single { get<MonitoreoDatabase>().organizationDao }
 
     single<cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository> {
         cu.uci.cisol.monitoreoambiental.data.local.DataStoreSessionManager(androidContext())
     }
 
     single<cu.uci.cisol.monitoreoambiental.domain.repository.UsuarioRepository> {
-        UsuarioRepositoryImpl(get())
+        UsuarioRepositoryImpl(get(), get(), androidContext())
     }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.TematicaRepository> {
         cu.uci.cisol.monitoreoambiental.data.repository.OfflineFirstTematicaRepository(get(), get())
@@ -41,6 +40,9 @@ val dataModule = module {
     }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.LocalidadRepository> {
         cu.uci.cisol.monitoreoambiental.data.repository.OfflineFirstLocalidadRepository(get(), get())
+    }
+    single<cu.uci.cisol.monitoreoambiental.domain.repository.OrganizationRepository> {
+        cu.uci.cisol.monitoreoambiental.data.repository.OfflineFirstOrganizationRepository(get(), get())
     }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository> {
         if (cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {

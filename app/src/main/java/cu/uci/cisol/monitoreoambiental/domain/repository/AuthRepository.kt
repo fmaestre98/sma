@@ -11,4 +11,5 @@ interface AuthRepository {
     suspend fun register(request: RegistrationRequest): EmptyResult<AuthError>
     suspend fun logout(): EmptyResult<AuthError>
     suspend fun terminateSessions(credentials: AuthCredentials, sessionIds: List<String>): EmptyResult<AuthError>
+    suspend fun requestPasswordReset(email: String): EmptyResult<AuthError>
 }

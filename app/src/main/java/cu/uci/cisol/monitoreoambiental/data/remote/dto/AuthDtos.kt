@@ -75,3 +75,8 @@ data class TerminateSessionsRequestDto(
     val password: String,
     @SerialName("session_ids") val sessionIds: List<String>
 )
+
+@Serializable
+data class PasswordResetRequestDto(
+    val email: String
+)

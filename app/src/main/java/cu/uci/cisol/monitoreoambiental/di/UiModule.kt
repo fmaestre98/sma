@@ -36,5 +36,11 @@ val uiModule = module {
             get()
         )
     }
+    viewModel {
+        cu.uci.cisol.monitoreoambiental.ui.atencion.AtencionDirectaViewModel(get())
+    }
+    viewModel {
+        cu.uci.cisol.monitoreoambiental.ui.profile.ProfileViewModel(get())
+    }
 }
 

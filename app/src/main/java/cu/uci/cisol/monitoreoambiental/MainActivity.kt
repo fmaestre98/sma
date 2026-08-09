@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
 
-                            HomeScreen(
+                             HomeScreen(
                                 viewModel = homeViewModel,
                                 onNuevaIncidencia = {
                                     navController.navigate("nueva_incidencia")
@@ -100,6 +100,12 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onInfoApp = {
                                     navController.navigate("info_app")
+                                },
+                                onAtencionDirecta = {
+                                    navController.navigate("atencion_directa")
+                                },
+                                onNavigateToProfile = {
+                                    navController.navigate("profile")
                                 },
                                 onLogout = {
                                     homeViewModel.logout()
@@ -160,6 +166,18 @@ class MainActivity : ComponentActivity() {
                         
                         composable("info_app") {
                             cu.uci.cisol.monitoreoambiental.ui.info.InfoAppScreen(
+                                onNavigateBack = { navController.navigateUp() }
+                            )
+                        }
+
+                        composable("atencion_directa") {
+                            cu.uci.cisol.monitoreoambiental.ui.atencion.AtencionDirectaScreen(
+                                onNavigateBack = { navController.navigateUp() }
+                            )
+                        }
+                        
+                        composable("profile") {
+                            cu.uci.cisol.monitoreoambiental.ui.profile.ProfileScreen(
                                 onNavigateBack = { navController.navigateUp() }
                             )
                         }

@@ -99,4 +99,11 @@ class AuthRepositoryImpl(
             is Result.Error -> Result.Error(AuthError.NetworkError(result.error))
         }
     }
+
+    override suspend fun requestPasswordReset(email: String): EmptyResult<AuthError> {
+        return when (val result = api.requestPasswordReset(PasswordResetRequestDto(email = email))) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> Result.Error(AuthError.NetworkError(result.error))
+        }
+    }
 }

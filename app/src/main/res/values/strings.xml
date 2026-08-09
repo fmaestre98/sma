@@ -8,4 +8,6 @@
     <string name="error_multiple_sessions">Tiene varias sesiones activas y debe seleccionar una sola para desconectar.</string>
     <string name="success_logout">Sesiones desconectadas correctamente. Por favor, inicie sesión nuevamente.</string>
     <string name="success_register">Registro exitoso. Los administradores revisarán su solicitud.</string>
+    <string name="error_request_timeout">Se agotó el tiempo de espera de la solicitud.</string>
+    <string name="error_payload_too_large">El archivo es demasiado grande.</string>
 </resources>

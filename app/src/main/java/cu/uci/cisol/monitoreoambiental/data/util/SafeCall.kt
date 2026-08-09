@@ -72,6 +72,18 @@ suspend inline fun <reified Response : Any> HttpClient.postMultipartSafe(
     }
 }
 
+suspend inline fun <reified Response : Any> HttpClient.patchMultipartSafe(
+    route: String,
+    crossinline formData: suspend () -> List<PartData>,
+): Result<Response, DataError.Network> {
+    return safeCall {
+        patch {
+            url(route)
+            setBody(MultiPartFormDataContent(formData()))
+        }
+    }
+}
+
 suspend inline fun <reified Response : Any> HttpClient.deleteSafe(
     route: String,
     queryParameters: Map<String, Any?> = mapOf()
@@ -92,6 +104,21 @@ suspend inline fun <reified T> safeCall(
     val response = try {
         execute()
     } catch (e: UnresolvedAddressException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Network.NO_INTERNET)
+    } catch (e: java.net.UnknownHostException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Network.NO_INTERNET)
+    } catch (e: java.net.ConnectException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Network.NO_INTERNET)
+    } catch (e: java.net.SocketTimeoutException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Network.REQUEST_TIMEOUT)
+    } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
+        e.printStackTrace()
+        return Result.Error(DataError.Network.REQUEST_TIMEOUT)
+    } catch (e: java.io.IOException) {
         e.printStackTrace()
         return Result.Error(DataError.Network.NO_INTERNET)
     } catch (e: SerializationException) {

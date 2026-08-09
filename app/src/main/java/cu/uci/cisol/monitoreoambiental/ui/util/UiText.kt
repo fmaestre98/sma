@@ -23,6 +23,8 @@ fun DataError.Network.toUiText(): UiText {
         DataError.Network.NO_INTERNET -> UiText.StringResource(R.string.error_no_internet)
         DataError.Network.SERVER_ERROR -> UiText.StringResource(R.string.error_server)
         DataError.Network.UNAUTHORIZED -> UiText.StringResource(R.string.error_unauthorized)
+        DataError.Network.REQUEST_TIMEOUT -> UiText.StringResource(R.string.error_request_timeout)
+        DataError.Network.PAYLOAD_TOO_LARGE -> UiText.StringResource(R.string.error_payload_too_large)
         else -> UiText.StringResource(R.string.error_unknown)
     }
 }

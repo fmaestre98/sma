@@ -6,6 +6,7 @@ import cu.uci.cisol.monitoreoambiental.data.local.entity.EstadoEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.IncidenciaEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.LocalidadEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.UsuarioEntity
+import cu.uci.cisol.monitoreoambiental.data.local.entity.OrganizationEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.TematicaEntity
 import androidx.room.TypeConverters
 
@@ -17,8 +18,9 @@ import androidx.room.TypeConverters
         TematicaEntity::class,
         EstadoEntity::class,
         LocalidadEntity::class,
+        OrganizationEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class MonitoreoDatabase : RoomDatabase() {
@@ -27,4 +29,5 @@ abstract class MonitoreoDatabase : RoomDatabase() {
     abstract val tematicaDao: TematicaDao
     abstract val estadoDao: EstadoDao
     abstract val localidadDao: LocalidadDao
+    abstract val organizationDao: OrganizationDao
 }

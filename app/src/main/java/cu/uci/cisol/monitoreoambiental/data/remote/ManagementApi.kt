@@ -1,6 +1,7 @@
 package cu.uci.cisol.monitoreoambiental.data.remote
 
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.EstadosResponseDto
+import cu.uci.cisol.monitoreoambiental.data.remote.dto.OrganizationsResponseDto
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.TematicasResponseDto
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.CreateIncidenciaResponseDto
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.IncidenciasListResponseDto
@@ -58,5 +59,9 @@ class ManagementApi(private val client: HttpClient) {
         formParts: List<PartData>,
     ): Result<CreateIncidenciaResponseDto, DataError.Network> {
         return client.postMultipartSafe("$BASE_URL/incidences/") { formParts }
+    }
+
+    suspend fun getOrganizations(): Result<OrganizationsResponseDto, DataError.Network> {
+        return client.getSafe("$BASE_URL/organization/", mapOf("page_size" to 1000))
     }
 }

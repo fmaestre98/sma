@@ -50,6 +50,8 @@ fun HomeScreen(
     onMisIncidencias: () -> Unit = {},
     onVerBorradores: () -> Unit = {},
     onInfoApp: () -> Unit = {},
+    onAtencionDirecta: () -> Unit = {},
+    onNavigateToProfile: () -> Unit = {},
     onLogout: () -> Unit = {},
     onNavigateToDetail: (String, Boolean) -> Unit = { _, _ -> },
     viewModel: HomeViewModel = koinViewModel()
@@ -70,6 +72,7 @@ fun HomeScreen(
                         is DrawerDestino.Principal -> { /* ya estamos aquí */ }
                         is DrawerDestino.NuevaIncidencia -> onNuevaIncidencia()
                         is DrawerDestino.MisIncidencias -> onMisIncidencias()
+                        is DrawerDestino.AtencionDirecta -> onAtencionDirecta()
                         is DrawerDestino.InfoApp -> onInfoApp()
                         else -> {}
                     }
@@ -108,7 +111,8 @@ fun HomeScreen(
                         HomeHeader(
                             searchQuery = uiState.searchQuery,
                             onSearchQueryChange = viewModel::onSearchQueryChange,
-                            onMenuClick = { scope.launch { drawerState.open() } }
+                            onMenuClick = { scope.launch { drawerState.open() } },
+                            onProfileClick = onNavigateToProfile
                         )
                     }
 
