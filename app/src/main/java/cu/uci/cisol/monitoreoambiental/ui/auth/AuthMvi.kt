@@ -25,6 +25,10 @@ data class AuthState(
     val passwordResetEmailError: UiText? = null,
     val isPasswordResetLoading: Boolean = false,
 
+    // URL config dialog
+    val showUrlConfigDialog: Boolean = false,
+    val tempUrl: String = "",
+
     // Error
     val error: UiText? = null
 )
@@ -48,6 +52,12 @@ sealed interface AuthAction {
     object DismissPasswordResetDialog : AuthAction
     data class OnPasswordResetEmailChange(val email: String) : AuthAction
     object SubmitPasswordReset : AuthAction
+
+    // URL config actions
+    object ShowUrlConfigDialog : AuthAction
+    object DismissUrlConfigDialog : AuthAction
+    data class OnUrlChange(val url: String) : AuthAction
+    data class SaveUrl(val context: android.content.Context) : AuthAction
 }
 
 sealed interface AuthEvent {

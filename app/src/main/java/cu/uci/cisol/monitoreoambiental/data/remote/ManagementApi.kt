@@ -18,7 +18,7 @@ import io.ktor.http.content.PartData
 class ManagementApi(private val client: HttpClient) {
 
     companion object {
-        const val BASE_URL = "${ApiConfig.BASE_URL}/api/v1/management"
+        val BASE_URL: String get() = "${ApiConfig.BASE_URL}/api/v1/management"
     }
 
     suspend fun getTematicas(): Result<TematicasResponseDto, DataError.Network> {

@@ -23,6 +23,12 @@ class MonitoreoAmbientalApp : Application(), Configuration.Provider {
     override fun onCreate() {
         super.onCreate()
 
+        val sharedPrefs = getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+        val savedUrl = sharedPrefs.getString("base_url", null)
+        if (savedUrl != null) {
+            cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.BASE_URL = savedUrl
+        }
+
         startKoin {
             androidLogger(Level.ERROR)
             androidContext(this@MonitoreoAmbientalApp)

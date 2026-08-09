@@ -13,8 +13,8 @@ import io.ktor.http.ContentType
 class AuthApi(private val client: HttpClient) {
 
     companion object {
-        const val BASE_URL = "${ApiConfig.BASE_URL}/auth"
-        const val USERS_BASE_URL = "${ApiConfig.BASE_URL}/api/v1/users"
+        val BASE_URL: String get() = "${ApiConfig.BASE_URL}/auth"
+        val USERS_BASE_URL: String get() = "${ApiConfig.BASE_URL}/api/v1/users"
     }
 
     suspend fun login(request: LoginRequestDto): io.ktor.client.statement.HttpResponse {

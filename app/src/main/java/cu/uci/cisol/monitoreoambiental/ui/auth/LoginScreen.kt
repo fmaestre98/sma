@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cu.uci.cisol.monitoreoambiental.R
+import cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig
 
 @Composable
 fun LoginScreen(
@@ -81,8 +83,19 @@ fun LoginScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
+    // URL config dialog
+    if (state.showUrlConfigDialog) {
+        UrlConfigDialog(
+            url = state.tempUrl,
+            onUrlChange = { viewModel.onAction(AuthAction.OnUrlChange(it)) },
+            onConfirm = { viewModel.onAction(AuthAction.SaveUrl(context)) },
+            onDismiss = { viewModel.onAction(AuthAction.DismissUrlConfigDialog) }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
             .fillMaxSize()
             .safeDrawingPadding()
             .padding(24.dp)
@@ -198,6 +211,23 @@ fun LoginScreen(
         }*/
 
         Spacer(modifier = Modifier.weight(1f))
+    }
+
+        if (ApiConfig.ENABLE_DYNAMIC_URL) {
+            IconButton(
+                onClick = { viewModel.onAction(AuthAction.ShowUrlConfigDialog) },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 16.dp, end = 16.dp)
+                    .safeDrawingPadding()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "Configurar URL API",
+                    tint = Color.Gray
+                )
+            }
+        }
     }
 }
 
@@ -318,6 +348,42 @@ fun ConflictResolutionDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isLoading) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+fun UrlConfigDialog(
+    url: String,
+    onUrlChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Configurar URL API") },
+        text = {
+            Column {
+                Text("Ingrese la URL base del backend para pruebas locales:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = onUrlChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    placeholder = { Text("http://192.168.1.x:8000") }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Guardar")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
                 Text("Cancelar")
             }
         }

@@ -9,7 +9,7 @@ import io.ktor.client.HttpClient
 class LocationsApi(private val client: HttpClient) {
 
     companion object {
-        const val BASE_URL = "${ApiConfig.BASE_URL}/api/v1/locations"
+        val BASE_URL: String get() = "${ApiConfig.BASE_URL}/api/v1/locations"
     }
 
     suspend fun getLocalities(): Result<LocalidadesResponseDto, DataError.Network> {

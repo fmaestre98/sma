@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cu.uci.cisol.monitoreoambiental.R
 import cu.uci.cisol.monitoreoambiental.domain.model.AuthCredentials
 import cu.uci.cisol.monitoreoambiental.domain.model.RegistrationRequest
+import cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig
 import cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
@@ -85,6 +86,26 @@ class AuthViewModel(
                 _state.update { it.copy(passwordResetEmail = action.email, passwordResetEmailError = null) }
             }
             AuthAction.SubmitPasswordReset -> submitPasswordReset()
+            
+            // URL config
+            AuthAction.ShowUrlConfigDialog -> {
+                _state.update { it.copy(showUrlConfigDialog = true, tempUrl = ApiConfig.BASE_URL) }
+            }
+            AuthAction.DismissUrlConfigDialog -> {
+                _state.update { it.copy(showUrlConfigDialog = false) }
+            }
+            is AuthAction.OnUrlChange -> {
+                _state.update { it.copy(tempUrl = action.url) }
+            }
+            is AuthAction.SaveUrl -> {
+                val url = _state.value.tempUrl.trim()
+                if (url.isNotEmpty()) {
+                    ApiConfig.BASE_URL = url
+                    val prefs = action.context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                    prefs.edit().putString("base_url", url).apply()
+                }
+                _state.update { it.copy(showUrlConfigDialog = false) }
+            }
         }
     }
 
