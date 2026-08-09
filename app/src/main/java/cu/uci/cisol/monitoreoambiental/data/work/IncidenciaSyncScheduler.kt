@@ -14,6 +14,7 @@ object IncidenciaSyncScheduler {
 
     private const val UPLOAD_WORK_NAME = "enviar_incidencias_pendientes"
     private const val PULL_WORK_NAME = "sincronizar_incidencias_periodico"
+    private const val PULL_APPEARANCE_WORK_NAME = "sincronizar_apariencia_periodico"
     private const val PULL_INTERVAL_HOURS = 3L
 
     private fun networkConstraints(): Constraints =
@@ -48,6 +49,17 @@ object IncidenciaSyncScheduler {
             PULL_WORK_NAME,
             ExistingPeriodicWorkPolicy.UPDATE,
             request,
+        )
+
+        val appearanceRequest = PeriodicWorkRequestBuilder<SincronizarAparienciaWorker>(
+            PULL_INTERVAL_HOURS,
+            TimeUnit.HOURS,
+        ).setConstraints(networkConstraints()).build()
+
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+            PULL_APPEARANCE_WORK_NAME,
+            ExistingPeriodicWorkPolicy.UPDATE,
+            appearanceRequest,
         )
     }
 }

@@ -8,6 +8,7 @@ import cu.uci.cisol.monitoreoambiental.data.local.entity.LocalidadEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.UsuarioEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.OrganizationEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.TematicaEntity
+import cu.uci.cisol.monitoreoambiental.data.local.db.SystemAppearanceEntity
 import androidx.room.TypeConverters
 
 @TypeConverters(Converters::class)
@@ -19,8 +20,9 @@ import androidx.room.TypeConverters
         EstadoEntity::class,
         LocalidadEntity::class,
         OrganizationEntity::class,
+        SystemAppearanceEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class MonitoreoDatabase : RoomDatabase() {
@@ -30,4 +32,5 @@ abstract class MonitoreoDatabase : RoomDatabase() {
     abstract val estadoDao: EstadoDao
     abstract val localidadDao: LocalidadDao
     abstract val organizationDao: OrganizationDao
+    abstract val systemAppearanceDao: SystemAppearanceDao
 }

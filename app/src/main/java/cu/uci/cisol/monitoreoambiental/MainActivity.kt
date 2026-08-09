@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.CompositionLocalProvider
+import cu.uci.cisol.monitoreoambiental.domain.repository.AppearanceRepository
+import cu.uci.cisol.monitoreoambiental.ui.theme.LocalSystemAppearance
+import org.koin.android.ext.android.inject
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -22,6 +26,8 @@ import cu.uci.cisol.monitoreoambiental.ui.theme.MonitoreoAmbientalTheme
 import org.koin.androidx.compose.koinViewModel
 
 class MainActivity : ComponentActivity() {
+    private val appearanceRepository: AppearanceRepository by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -32,9 +38,16 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
         setContent {
-            MonitoreoAmbientalTheme {
-                val navController = rememberNavController()
-                val authViewModel: AuthViewModel = koinViewModel()
+            val appearance by appearanceRepository.observeAppearance().collectAsState(initial = null)
+
+            LaunchedEffect(Unit) {
+                appearanceRepository.syncAppearance()
+            }
+
+            CompositionLocalProvider(LocalSystemAppearance provides appearance) {
+                MonitoreoAmbientalTheme {
+                    val navController = rememberNavController()
+                    val authViewModel: AuthViewModel = koinViewModel()
                 val isSessionActive by authViewModel.isSessionActive.collectAsState(initial = null)
                 val snackbarHostState = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
 
@@ -181,6 +194,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateBack = { navController.navigateUp() }
                             )
                         }
+                    }
                     }
                 }
                 }

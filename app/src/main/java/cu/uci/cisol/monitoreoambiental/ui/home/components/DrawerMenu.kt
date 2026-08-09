@@ -3,6 +3,8 @@ package cu.uci.cisol.monitoreoambiental.ui.home.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -36,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulClaro
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulPrimario
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulSecundario
+import cu.uci.cisol.monitoreoambiental.ui.theme.LocalSystemAppearance
 
 sealed class DrawerDestino(val route: String, val label: String, val icon: ImageVector) {
     data object Principal : DrawerDestino("home", "Principal", Icons.Default.Home)
@@ -61,6 +64,8 @@ fun DrawerMenu(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val appearance = LocalSystemAppearance.current
+
     ModalDrawerSheet(modifier = modifier) {
         // Cabecera del Drawer
         Box(
@@ -71,9 +76,19 @@ fun DrawerMenu(
                         colors = listOf(AzulPrimario, AzulSecundario)
                     )
                 )
-                .padding(vertical = 28.dp, horizontal = 20.dp)
         ) {
-            Column {
+            if (appearance?.backgroundImage != null) {
+                AsyncImage(
+                    model = appearance.backgroundImage,
+                    contentDescription = null,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.6f
+                )
+            }
+            Column(
+                modifier = Modifier.padding(vertical = 28.dp, horizontal = 20.dp)
+            ) {
                 Box(
                     modifier = Modifier
                         .size(56.dp)

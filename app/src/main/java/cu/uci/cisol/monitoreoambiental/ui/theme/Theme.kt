@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -40,7 +41,7 @@ fun MonitoreoAmbientalTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
+    var colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -48,6 +49,20 @@ fun MonitoreoAmbientalTheme(
 
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
+    }
+
+    val appearance = LocalSystemAppearance.current
+    if (appearance != null) {
+        try {
+            val pColor = Color(android.graphics.Color.parseColor(appearance.primaryColor))
+            val sColor = Color(android.graphics.Color.parseColor(appearance.secondaryColor))
+            colorScheme = colorScheme.copy(
+                primary = pColor,
+                secondary = sColor
+            )
+        } catch (e: Exception) {
+            // Ignore color parsing errors and use default scheme
+        }
     }
 
     MaterialTheme(

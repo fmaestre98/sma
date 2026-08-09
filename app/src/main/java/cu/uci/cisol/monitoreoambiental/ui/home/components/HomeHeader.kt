@@ -2,6 +2,7 @@ package cu.uci.cisol.monitoreoambiental.ui.home.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import coil.compose.AsyncImage
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cu.uci.cisol.monitoreoambiental.R
 import cu.uci.cisol.monitoreoambiental.ui.theme.AzulPrimario
+import cu.uci.cisol.monitoreoambiental.ui.theme.LocalSystemAppearance
 
 @Composable
 fun HomeHeader(
@@ -44,6 +46,8 @@ fun HomeHeader(
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val appearance = LocalSystemAppearance.current
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -68,11 +72,21 @@ fun HomeHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.logo),
-                    contentDescription = "Logo SMA",
-                    modifier = Modifier.width(90.dp).height(45.dp)
-                )
+                if (appearance?.logoUrl != null) {
+                    AsyncImage(
+                        model = appearance.logoUrl,
+                        contentDescription = "Logo SMA",
+                        modifier = Modifier.width(90.dp).height(45.dp),
+                        error = painterResource(id = R.drawable.logo),
+                        fallback = painterResource(id = R.drawable.logo)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.logo),
+                        contentDescription = "Logo SMA",
+                        modifier = Modifier.width(90.dp).height(45.dp)
+                    )
+                }
             }
 
             Box(
