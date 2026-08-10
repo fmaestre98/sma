@@ -520,7 +520,7 @@ fun DetalleIncidenciaScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                /*Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
                         checked = state.marcadaResuelta,
                         onCheckedChange = {
@@ -531,7 +531,7 @@ fun DetalleIncidenciaScreen(
                         text = "Marcar como Resuelta",
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                }
+                }*/
 
                 Spacer(modifier = Modifier.height(24.dp))
                 SectionTitle("Ubicación")

@@ -11,6 +11,9 @@ data class ProfileState(
     val phone: String = "",
     val email: String = "",
     val localAvatarUri: android.net.Uri? = null,
+    val firstNameError: String? = null,
+    val lastNameError: String? = null,
+    val phoneError: String? = null,
     val emailError: String? = null,
     val errorMessage: String? = null,
     val updateSuccess: Boolean = false

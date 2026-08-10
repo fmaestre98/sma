@@ -45,19 +45,25 @@ class ProfileViewModel(
     }
 
     fun onFirstNameChange(name: String) {
-        _uiState.update { it.copy(firstName = name) }
+        _uiState.update { it.copy(firstName = name, firstNameError = null) }
     }
 
     fun onLastNameChange(name: String) {
-        _uiState.update { it.copy(lastName = name) }
+        _uiState.update { it.copy(lastName = name, lastNameError = null) }
     }
 
     fun onPhoneChange(phone: String) {
-        _uiState.update { it.copy(phone = phone) }
+        val newPhone = phone.filter { it.isDigit() }.take(8)
+        _uiState.update { it.copy(phone = newPhone, phoneError = null) }
     }
 
     fun onEmailChange(email: String) {
-        _uiState.update { it.copy(email = email, emailError = if (email.isBlank()) "El correo no puede estar vacío" else null) }
+        _uiState.update { it.copy(email = email, emailError = null) }
+    }
+
+    private fun isValidEmail(email: String): Boolean {
+        val emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$"
+        return email.matches(emailRegex.toRegex())
     }
 
     fun onAvatarSelected(uri: android.net.Uri?) {
@@ -66,8 +72,47 @@ class ProfileViewModel(
 
     fun onSave() {
         val currentState = _uiState.value
+        var hasError = false
+        var firstNameError: String? = null
+        var lastNameError: String? = null
+        var phoneError: String? = null
+        var emailError: String? = null
+
+        if (currentState.firstName.isBlank()) {
+            firstNameError = "El nombre no puede estar vacío"
+            hasError = true
+        }
+
+        if (currentState.lastName.isBlank()) {
+            lastNameError = "Los apellidos no pueden estar vacíos"
+            hasError = true
+        }
+
+        if (currentState.phone.isBlank()) {
+            phoneError = "El teléfono no puede estar vacío"
+            hasError = true
+        } else if (currentState.phone.length < 8) {
+            phoneError = "El teléfono debe tener 8 dígitos"
+            hasError = true
+        }
+
         if (currentState.email.isBlank()) {
-            _uiState.update { it.copy(emailError = "El correo no puede estar vacío") }
+            emailError = "El correo no puede estar vacío"
+            hasError = true
+        } else if (!isValidEmail(currentState.email)) {
+            emailError = "El correo no es válido"
+            hasError = true
+        }
+
+        if (hasError) {
+            _uiState.update {
+                it.copy(
+                    firstNameError = firstNameError,
+                    lastNameError = lastNameError,
+                    phoneError = phoneError,
+                    emailError = emailError
+                )
+            }
             return
         }
 

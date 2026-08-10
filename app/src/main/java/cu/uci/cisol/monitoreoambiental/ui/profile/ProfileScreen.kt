@@ -134,7 +134,13 @@ fun ProfileScreen(
                 value = uiState.firstName,
                 onValueChange = viewModel::onFirstNameChange,
                 label = { Text("Nombre") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = uiState.firstNameError != null,
+                supportingText = {
+                    if (uiState.firstNameError != null) {
+                        Text(uiState.firstNameError!!)
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -143,7 +149,13 @@ fun ProfileScreen(
                 value = uiState.lastName,
                 onValueChange = viewModel::onLastNameChange,
                 label = { Text("Apellidos") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = uiState.lastNameError != null,
+                supportingText = {
+                    if (uiState.lastNameError != null) {
+                        Text(uiState.lastNameError!!)
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -152,7 +164,13 @@ fun ProfileScreen(
                 value = uiState.phone,
                 onValueChange = viewModel::onPhoneChange,
                 label = { Text("Teléfono") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = uiState.phoneError != null,
+                supportingText = {
+                    if (uiState.phoneError != null) {
+                        Text(uiState.phoneError!!)
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(8.dp))
