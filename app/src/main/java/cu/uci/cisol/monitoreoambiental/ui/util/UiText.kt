@@ -25,6 +25,7 @@ fun DataError.Network.toUiText(): UiText {
         DataError.Network.UNAUTHORIZED -> UiText.StringResource(R.string.error_unauthorized)
         DataError.Network.REQUEST_TIMEOUT -> UiText.StringResource(R.string.error_request_timeout)
         DataError.Network.PAYLOAD_TOO_LARGE -> UiText.StringResource(R.string.error_payload_too_large)
+        DataError.Network.TOO_MANY_REQUESTS -> UiText.StringResource(R.string.error_too_many_requests)
         else -> UiText.StringResource(R.string.error_unknown)
     }
 }
@@ -32,6 +33,9 @@ fun DataError.Network.toUiText(): UiText {
 fun AuthError.toUiText(): UiText {
     return when (this) {
         is AuthError.Blocked -> UiText.DynamicString(message)
+        is AuthError.AccountNotVerified -> UiText.StringResource(R.string.error_account_not_verified)
+        is AuthError.OtpRequired -> UiText.StringResource(R.string.success_register)
+        is AuthError.OtpError -> UiText.DynamicString(message)
         AuthError.InvalidCredentials -> UiText.StringResource(R.string.error_invalid_credentials)
         is AuthError.MultipleSessions -> UiText.StringResource(R.string.error_multiple_sessions)
         is AuthError.NetworkError -> error.toUiText()

@@ -11,7 +11,6 @@ import cu.uci.cisol.monitoreoambiental.domain.util.DataError
 import cu.uci.cisol.monitoreoambiental.domain.util.EmptyResult
 import cu.uci.cisol.monitoreoambiental.domain.util.Result
 import io.ktor.client.call.body
-import io.ktor.client.plugins.ClientRequestException
 import kotlinx.coroutines.CancellationException
 import java.nio.channels.UnresolvedAddressException
 import kotlinx.serialization.SerializationException
@@ -28,7 +27,7 @@ class AuthRepositoryImpl(
                 password = credentials.contrasena
             )
             val response = api.login(request)
-            
+
             when (response.status.value) {
                 in 200..299 -> {
                     val tokenResponse = response.body<TokenResponseDto>()
@@ -36,8 +35,22 @@ class AuthRepositoryImpl(
                     Result.Success(Unit)
                 }
                 401 -> {
-                    val errorDto = response.body<ErrorDetailDto>()
-                    Result.Error(AuthError.Blocked(errorDto.detail))
+                    val errorDto = runCatching { response.body<ErrorDetailDto>() }.getOrNull()
+                    if (errorDto?.code == "account_not_verified") {
+                        Result.Error(
+                            AuthError.AccountNotVerified(
+                                email = credentials.username,
+                                message = errorDto.detail
+                                    ?: "Your account is not verified. Please verify your email.",
+                            ),
+                        )
+                    } else {
+                        Result.Error(
+                            AuthError.Blocked(
+                                errorDto?.detail ?: "Credenciales inválidas o cuenta bloqueada",
+                            ),
+                        )
+                    }
                 }
                 409 -> {
                     val conflictDto = response.body<MultipleSessionsConflictDto>()
@@ -58,18 +71,33 @@ class AuthRepositoryImpl(
     override suspend fun register(request: RegistrationRequest): EmptyResult<AuthError> {
         val dto = RegisterRequestDto(
             email = request.correo ?: "",
+            userName = request.nombreUsuario,
             firstName = request.nombreCompleto?.split(" ")?.firstOrNull() ?: "",
             lastName = request.nombreCompleto?.split(" ")?.drop(1)?.joinToString(" ") ?: "",
             password = request.contrasena,
-            password1 = request.contrasena,
             password2 = request.contrasena,
-            userNameUnderscore = request.nombreUsuario,
-            username = request.nombreUsuario
         )
-        
+
         return when (val result = api.register(dto)) {
             is Result.Success -> Result.Success(Unit)
-            is Result.Error -> Result.Error(AuthError.NetworkError(result.error))
+            is Result.Error -> mapNetworkAuthError(result.error)
+        }
+    }
+
+    override suspend fun verifyRegistration(email: String, otp: String): EmptyResult<AuthError> {
+        return when (val result = api.verifyRegistration(VerifyRegistrationRequestDto(email = email, otp = otp))) {
+            is Result.Success -> {
+                sessionRepository.saveTokens(result.data.access, result.data.refresh)
+                Result.Success(Unit)
+            }
+            is Result.Error -> mapNetworkAuthError(result.error)
+        }
+    }
+
+    override suspend fun resendOtp(email: String): EmptyResult<AuthError> {
+        return when (val result = api.resendOtp(ResendOtpRequestDto(email = email))) {
+            is Result.Success -> Result.Success(Unit)
+            is Result.Error -> mapNetworkAuthError(result.error)
         }
     }
 
@@ -82,7 +110,7 @@ class AuthRepositoryImpl(
                 Result.Success(Unit)
             }
             is Result.Error -> {
-                sessionRepository.clearSession() // Clear locally even if API fails
+                sessionRepository.clearSession()
                 Result.Error(AuthError.NetworkError(result.error))
             }
         }
@@ -104,6 +132,14 @@ class AuthRepositoryImpl(
         return when (val result = api.requestPasswordReset(PasswordResetRequestDto(email = email))) {
             is Result.Success -> Result.Success(Unit)
             is Result.Error -> Result.Error(AuthError.NetworkError(result.error))
+        }
+    }
+
+    private fun mapNetworkAuthError(error: DataError.Network): EmptyResult<AuthError> {
+        return when (error) {
+            DataError.Network.TOO_MANY_REQUESTS ->
+                Result.Error(AuthError.OtpError("Demasiados intentos. Intente de nuevo más tarde."))
+            else -> Result.Error(AuthError.NetworkError(error))
         }
     }
 }

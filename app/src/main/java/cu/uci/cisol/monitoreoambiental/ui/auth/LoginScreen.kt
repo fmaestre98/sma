@@ -93,6 +93,19 @@ fun LoginScreen(
         )
     }
 
+    if (state.showOtpVerification) {
+        OtpVerificationDialog(
+            email = state.otpEmail.ifBlank { state.email },
+            otp = state.otpCode,
+            isLoading = state.isLoading,
+            error = state.error?.asString(context),
+            onOtpChange = { viewModel.onAction(AuthAction.OnOtpChange(it)) },
+            onConfirm = { viewModel.onAction(AuthAction.SubmitOtpVerification) },
+            onResend = { viewModel.onAction(AuthAction.ResendOtp) },
+            onDismiss = { viewModel.onAction(AuthAction.DismissOtpVerification) },
+        )
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -351,6 +364,81 @@ fun ConflictResolutionDialog(
                 Text("Cancelar")
             }
         }
+    )
+}
+
+@Composable
+fun OtpVerificationDialog(
+    email: String,
+    otp: String,
+    isLoading: Boolean,
+    error: String?,
+    onOtpChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onResend: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = { if (!isLoading) onDismiss() },
+        title = {
+            Text(
+                text = "Verificar correo",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.SemiBold,
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "Ingrese el código OTP de 6 dígitos enviado a $email",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = otp,
+                    onValueChange = onOtpChange,
+                    label = { Text("Código OTP") },
+                    placeholder = { Text("123456") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    singleLine = true,
+                    enabled = !isLoading,
+                    isError = error != null,
+                    supportingText = if (error != null) {
+                        { Text(error, color = MaterialTheme.colorScheme.error) }
+                    } else null,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = !isLoading && otp.length == 6,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF123C78)),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text("Verificar")
+                }
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onResend, enabled = !isLoading) {
+                    Text("Reenviar", color = Color(0xFF123C78))
+                }
+                TextButton(onClick = onDismiss, enabled = !isLoading) {
+                    Text("Cancelar", color = Color(0xFF123C78))
+                }
+            }
+        },
     )
 }
 

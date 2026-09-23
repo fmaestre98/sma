@@ -7,9 +7,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class LocalidadesResponseDto(
     val count: Int,
-    val next: String?,
-    val previous: String?,
-    val localidades: List<LocalidadDto>,
+    val next: String? = null,
+    val previous: String? = null,
+    val results: List<LocalidadDto> = emptyList(),
 )
 
 @Serializable

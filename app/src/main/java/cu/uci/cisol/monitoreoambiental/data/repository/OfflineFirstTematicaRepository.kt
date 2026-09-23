@@ -27,7 +27,7 @@ class OfflineFirstTematicaRepository(
         val result = managementApi.getTematicas()
         return when (result) {
             is Result.Success -> {
-                val entities = result.data.temas.map { it.toTematicaEntity() }
+                val entities = result.data.results.map { it.toTematicaEntity() }
                 tematicaDao.clearAll()
                 tematicaDao.insertAll(entities)
                 Result.Success(Unit)

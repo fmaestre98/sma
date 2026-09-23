@@ -9,7 +9,7 @@ data class OrganizationsResponseDto(
     val count: Int,
     val next: String? = null,
     val previous: String? = null,
-    @SerialName("organizaciones") val results: List<OrganizationDto>
+    val results: List<OrganizationDto> = emptyList(),
 )
 
 @Serializable
@@ -24,7 +24,7 @@ data class OrganizationDto(
     val description: String? = null,
     val email: String? = null,
     val phone: String? = null,
-    @SerialName("imagen_url") val imageUrl: String? = null,
+    @SerialName("logo_url") val logoUrl: String? = null,
     @SerialName("incidences_count") val incidencesCount: Int = 0,
 )
 
@@ -36,6 +36,6 @@ fun OrganizationDto.toOrganizationEntity(): OrganizationEntity = OrganizationEnt
     description = description,
     email = email,
     phone = phone,
-    imageUrl = imageUrl,
+    imageUrl = logoUrl,
     incidencesCount = incidencesCount,
 )

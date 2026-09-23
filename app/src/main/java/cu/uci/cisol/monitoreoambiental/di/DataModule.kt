@@ -48,6 +48,7 @@ val dataModule = module {
     single<cu.uci.cisol.monitoreoambiental.domain.repository.AppearanceRepository> {
         cu.uci.cisol.monitoreoambiental.data.repository.AppearanceRepositoryImpl(get(), get())
     }
+    single { cu.uci.cisol.monitoreoambiental.data.util.EvidenceUploadHelper(get(), androidContext()) }
     single<cu.uci.cisol.monitoreoambiental.domain.repository.IncidenciaRepository> {
         if (cu.uci.cisol.monitoreoambiental.core.config.AppConfig.USE_MOCK_INCIDENCIAS) {
             cu.uci.cisol.monitoreoambiental.data.repository.MockIncidenciaRepositoryImpl()
@@ -58,7 +59,7 @@ val dataModule = module {
                 tematicaDao = get(),
                 estadoDao = get(),
                 localidadDao = get(),
-                context = androidContext(),
+                evidenceUploadHelper = get(),
             )
         }
     }

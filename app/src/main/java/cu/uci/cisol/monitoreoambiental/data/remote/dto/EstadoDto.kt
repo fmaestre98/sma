@@ -7,21 +7,21 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class EstadosResponseDto(
     val count: Int,
-    val next: String?,
-    val previous: String?,
-    @SerialName("estados_de_incidencia") val estados: List<EstadoDto>
+    val next: String? = null,
+    val previous: String? = null,
+    val results: List<EstadoDto> = emptyList(),
 )
 
 @Serializable
 data class EstadoDto(
     val id: String,
-    val slug: String?,
+    val slug: String? = null,
     @SerialName("is_active") val isActive: Boolean,
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
     val language: String,
     val name: String,
-    val description: String?,
+    val description: String? = null,
     @SerialName("color_hex") val colorHex: String,
     val weight: Int,
     @SerialName("is_final") val isFinal: Boolean,

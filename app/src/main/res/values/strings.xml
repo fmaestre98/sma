@@ -7,7 +7,12 @@
     <string name="error_invalid_credentials">Credenciales inválidas.</string>
     <string name="error_multiple_sessions">Tiene varias sesiones activas y debe seleccionar una sola para desconectar.</string>
     <string name="success_logout">Sesiones desconectadas correctamente. Por favor, inicie sesión nuevamente.</string>
-    <string name="success_register">Registro exitoso. Los administradores revisarán su solicitud.</string>
+    <string name="success_register">Se envió un código OTP a su correo. Verifique para activar la cuenta.</string>
+    <string name="success_otp_verified">Cuenta verificada correctamente.</string>
+    <string name="success_otp_resent">Código OTP reenviado.</string>
+    <string name="error_account_not_verified">Su cuenta no está verificada. Ingrese el código OTP enviado a su correo.</string>
+    <string name="error_otp">Error de verificación OTP.</string>
+    <string name="error_too_many_requests">Demasiadas solicitudes. Espere un momento e intente de nuevo.</string>
     <string name="error_request_timeout">Se agotó el tiempo de espera de la solicitud.</string>
     <string name="error_payload_too_large">El archivo es demasiado grande.</string>
 </resources>

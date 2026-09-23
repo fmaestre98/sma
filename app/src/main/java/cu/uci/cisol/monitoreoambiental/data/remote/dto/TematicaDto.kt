@@ -7,9 +7,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TematicasResponseDto(
     val count: Int,
-    val next: String?,
-    val previous: String?,
-    val temas: List<TematicaDto>
+    val next: String? = null,
+    val previous: String? = null,
+    val results: List<TematicaDto> = emptyList(),
 )
 
 @Serializable

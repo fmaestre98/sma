@@ -84,6 +84,11 @@ class MainActivity : ComponentActivity() {
                                             popUpTo("register") { inclusive = true }
                                         }
                                     },
+                                    onNavigateToHome = {
+                                        navController.navigate("home") {
+                                            popUpTo("register") { inclusive = true }
+                                        }
+                                    },
                                     snackbarHostState = snackbarHostState
                                 )
                             }

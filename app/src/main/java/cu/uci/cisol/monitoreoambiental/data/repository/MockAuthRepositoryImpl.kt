@@ -16,6 +16,8 @@ class MockAuthRepositoryImpl : AuthRepository {
             Result.Success(Unit)
         } else if (credentials.username == "user@test.com" && credentials.contrasena == "password") {
             Result.Success(Unit)
+        } else if (credentials.username == "unverified@test.com") {
+            Result.Error(AuthError.AccountNotVerified(credentials.username, "Account not verified"))
         } else {
             Result.Error(AuthError.InvalidCredentials)
         }
@@ -28,6 +30,20 @@ class MockAuthRepositoryImpl : AuthRepository {
         } else {
             Result.Error(AuthError.Unknown)
         }
+    }
+
+    override suspend fun verifyRegistration(email: String, otp: String): EmptyResult<AuthError> {
+        delay(500)
+        return if (otp == "123456") {
+            Result.Success(Unit)
+        } else {
+            Result.Error(AuthError.OtpError("OTP inválido"))
+        }
+    }
+
+    override suspend fun resendOtp(email: String): EmptyResult<AuthError> {
+        delay(500)
+        return Result.Success(Unit)
     }
 
     override suspend fun logout(): EmptyResult<AuthError> {

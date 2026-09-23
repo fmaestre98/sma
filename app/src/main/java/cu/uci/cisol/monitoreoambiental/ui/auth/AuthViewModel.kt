@@ -63,6 +63,20 @@ class AuthViewModel(
                     register(currentState)
                 }
             }
+            is AuthAction.OnOtpChange -> _state.update { it.copy(otpCode = action.otp.filter { ch -> ch.isDigit() }.take(6), error = null) }
+            AuthAction.SubmitOtpVerification -> verifyOtp()
+            AuthAction.ResendOtp -> resendOtp()
+            AuthAction.DismissOtpVerification -> {
+                _state.update {
+                    it.copy(
+                        showOtpVerification = false,
+                        otpCode = "",
+                        otpEmail = "",
+                        otpRetryAfterSeconds = null,
+                        error = null,
+                    )
+                }
+            }
             is AuthAction.OnSessionSelected -> {
                 val newSelection = if (action.selected) {
                     _state.value.selectedSessionIds + action.sessionId
@@ -75,7 +89,6 @@ class AuthViewModel(
                 _state.update { it.copy(isResolvingConflict = false, conflictSessions = emptyList(), selectedSessionIds = emptySet()) }
             }
             AuthAction.SubmitConflictResolution -> resolveConflict()
-            // Password reset
             AuthAction.ShowPasswordResetDialog -> {
                 _state.update { it.copy(showPasswordResetDialog = true, passwordResetEmail = "", passwordResetEmailError = null) }
             }
@@ -86,8 +99,6 @@ class AuthViewModel(
                 _state.update { it.copy(passwordResetEmail = action.email, passwordResetEmailError = null) }
             }
             AuthAction.SubmitPasswordReset -> submitPasswordReset()
-            
-            // URL config
             AuthAction.ShowUrlConfigDialog -> {
                 _state.update { it.copy(showUrlConfigDialog = true, tempUrl = ApiConfig.BASE_URL) }
             }
@@ -114,27 +125,39 @@ class AuthViewModel(
             _state.update { it.copy(isLoading = true, error = null) }
             val credentials = AuthCredentials(currentState.email, currentState.password)
             val result = authRepository.login(credentials)
-            
+
             _state.update { it.copy(isLoading = false) }
-            
+
             when (result) {
                 is Result.Success -> {
-                    tematicaRepository.syncTematicas()
-                    estadoRepository.syncEstados()
-                    localidadRepository.syncLocalities()
+                    syncCatalogs()
                     _events.send(AuthEvent.LoginSuccess)
                 }
                 is Result.Error -> {
-                    if (result.error is AuthError.MultipleSessions) {
-                        _state.update { 
-                            it.copy(
-                                isResolvingConflict = true,
-                                conflictSessions = result.error.activeSessions
-                            )
+                    when (val error = result.error) {
+                        is AuthError.MultipleSessions -> {
+                            _state.update {
+                                it.copy(
+                                    isResolvingConflict = true,
+                                    conflictSessions = error.activeSessions,
+                                )
+                            }
                         }
-                    } else {
-                        _state.update { it.copy(error = result.error.toUiText()) }
-                        _events.send(AuthEvent.ShowSnackbar(result.error.toUiText()))
+                        is AuthError.AccountNotVerified -> {
+                            _state.update {
+                                it.copy(
+                                    showOtpVerification = true,
+                                    otpEmail = error.email,
+                                    otpCode = "",
+                                    error = error.toUiText(),
+                                )
+                            }
+                            _events.send(AuthEvent.ShowSnackbar(error.toUiText()))
+                        }
+                        else -> {
+                            _state.update { it.copy(error = error.toUiText()) }
+                            _events.send(AuthEvent.ShowSnackbar(error.toUiText()))
+                        }
                     }
                 }
             }
@@ -150,15 +173,22 @@ class AuthViewModel(
                 nombreCompleto = "${currentState.firstName} ${currentState.lastName}".trim(),
                 correo = currentState.email
             )
-            
+
             val result = authRepository.register(request)
-            
+
             _state.update { it.copy(isLoading = false) }
-            
+
             when (result) {
                 is Result.Success -> {
                     val msg = UiText.StringResource(R.string.success_register)
-                    _state.update { it.copy(isLoginMode = true) }
+                    _state.update {
+                        it.copy(
+                            showOtpVerification = true,
+                            otpEmail = currentState.email,
+                            otpCode = "",
+                            error = null,
+                        )
+                    }
                     _events.send(AuthEvent.RegisterSuccess(msg))
                     _events.send(AuthEvent.ShowSnackbar(msg))
                 }
@@ -168,6 +198,61 @@ class AuthViewModel(
                 }
             }
         }
+    }
+
+    private fun verifyOtp() {
+        viewModelScope.launch {
+            val current = _state.value
+            val email = current.otpEmail.ifBlank { current.email }
+            if (email.isBlank() || current.otpCode.length < 6) {
+                _state.update { it.copy(error = UiText.DynamicString("Ingrese el código OTP de 6 dígitos")) }
+                return@launch
+            }
+            _state.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.verifyRegistration(email, current.otpCode)) {
+                is Result.Success -> {
+                    syncCatalogs()
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            showOtpVerification = false,
+                            otpCode = "",
+                            otpEmail = "",
+                        )
+                    }
+                    _events.send(AuthEvent.ShowSnackbar(UiText.StringResource(R.string.success_otp_verified)))
+                    _events.send(AuthEvent.LoginSuccess)
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(isLoading = false, error = result.error.toUiText()) }
+                    _events.send(AuthEvent.ShowSnackbar(result.error.toUiText()))
+                }
+            }
+        }
+    }
+
+    private fun resendOtp() {
+        viewModelScope.launch {
+            val email = _state.value.otpEmail.ifBlank { _state.value.email }
+            if (email.isBlank()) return@launch
+            _state.update { it.copy(isLoading = true, error = null) }
+            when (val result = authRepository.resendOtp(email)) {
+                is Result.Success -> {
+                    _state.update { it.copy(isLoading = false) }
+                    _events.send(AuthEvent.ShowSnackbar(UiText.StringResource(R.string.success_otp_resent)))
+                }
+                is Result.Error -> {
+                    _state.update { it.copy(isLoading = false, error = result.error.toUiText()) }
+                    _events.send(AuthEvent.ShowSnackbar(result.error.toUiText()))
+                }
+            }
+        }
+    }
+
+    private suspend fun syncCatalogs() {
+        tematicaRepository.syncTematicas()
+        estadoRepository.syncEstados()
+        localidadRepository.syncLocalities()
     }
 
     private fun resolveConflict() {

@@ -101,36 +101,49 @@ suspend inline fun <reified Response : Any> HttpClient.deleteSafe(
 suspend inline fun <reified T> safeCall(
     execute: () -> HttpResponse
 ): Result<T, DataError.Network> {
-    val response = try {
-        execute()
-    } catch (e: UnresolvedAddressException) {
-        e.printStackTrace()
-        return Result.Error(DataError.Network.NO_INTERNET)
-    } catch (e: java.net.UnknownHostException) {
-        e.printStackTrace()
-        return Result.Error(DataError.Network.NO_INTERNET)
-    } catch (e: java.net.ConnectException) {
-        e.printStackTrace()
-        return Result.Error(DataError.Network.NO_INTERNET)
-    } catch (e: java.net.SocketTimeoutException) {
-        e.printStackTrace()
-        return Result.Error(DataError.Network.REQUEST_TIMEOUT)
-    } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
-        e.printStackTrace()
-        return Result.Error(DataError.Network.REQUEST_TIMEOUT)
-    } catch (e: java.io.IOException) {
-        e.printStackTrace()
-        return Result.Error(DataError.Network.NO_INTERNET)
-    } catch (e: SerializationException) {
-        e.printStackTrace()
-        return Result.Error(DataError.Network.SERIALIZATION)
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        e.printStackTrace()
-        return Result.Error(DataError.Network.UNKNOWN)
-    }
+    var attempt = 0
+    while (true) {
+        val response = try {
+            execute()
+        } catch (e: UnresolvedAddressException) {
+            e.printStackTrace()
+            return Result.Error(DataError.Network.NO_INTERNET)
+        } catch (e: java.net.UnknownHostException) {
+            e.printStackTrace()
+            return Result.Error(DataError.Network.NO_INTERNET)
+        } catch (e: java.net.ConnectException) {
+            e.printStackTrace()
+            return Result.Error(DataError.Network.NO_INTERNET)
+        } catch (e: java.net.SocketTimeoutException) {
+            e.printStackTrace()
+            return Result.Error(DataError.Network.REQUEST_TIMEOUT)
+        } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
+            e.printStackTrace()
+            return Result.Error(DataError.Network.REQUEST_TIMEOUT)
+        } catch (e: java.io.IOException) {
+            e.printStackTrace()
+            return Result.Error(DataError.Network.NO_INTERNET)
+        } catch (e: SerializationException) {
+            e.printStackTrace()
+            return Result.Error(DataError.Network.SERIALIZATION)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            e.printStackTrace()
+            return Result.Error(DataError.Network.UNKNOWN)
+        }
 
-    return responseToResult(response)
+        val result = responseToResult<T>(response)
+        if (result is Result.Success) return result
+        if (result is Result.Error &&
+            result.error == DataError.Network.TOO_MANY_REQUESTS &&
+            attempt < 2
+        ) {
+            kotlinx.coroutines.delay(400L * (attempt + 1))
+            attempt++
+        } else {
+            return result
+        }
+    }
 }
 
 suspend inline fun <reified T> responseToResult(

@@ -1,5 +1,6 @@
 package cu.uci.cisol.monitoreoambiental.di
 
+import cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig
 import cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.request.header
@@ -32,7 +33,7 @@ val networkModule = module {
         HttpClient(Android) {
             install(DefaultRequest) {
                 header("x-client-type", "apk")
-                header("X-App-Secret", cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.APP_SECRET)
+                header("X-App-Secret", ApiConfig.APP_SECRET)
             }
             install(Logging) {
                 logger = Logger.SIMPLE
@@ -40,11 +41,11 @@ val networkModule = module {
             }
             install(ContentNegotiation) {
                 json(
-                        Json {
-                            prettyPrint = true
-                            isLenient = true
-                            ignoreUnknownKeys = true
-                        }
+                    Json {
+                        prettyPrint = true
+                        isLenient = true
+                        ignoreUnknownKeys = true
+                    }
                 )
             }
             install(Auth) {
@@ -61,14 +62,14 @@ val networkModule = module {
                     refreshTokens {
                         val refresh = sessionRepository.getRefreshToken() ?: return@refreshTokens null
                         try {
-                            val client = io.ktor.client.HttpClient(Android) {
-                                install(DefaultRequest) { 
-                                    header("x-client-type", "apk") 
-                                    header("X-App-Secret", cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.APP_SECRET)
+                            val client = HttpClient(Android) {
+                                install(DefaultRequest) {
+                                    header("x-client-type", "apk")
+                                    header("X-App-Secret", ApiConfig.APP_SECRET)
                                 }
                                 install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
                             }
-                            val response = client.post("${cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.BASE_URL}/auth/token/refresh/") {
+                            val response = client.post("${ApiConfig.AUTH_BASE}/token/refresh/") {
                                 contentType(ContentType.Application.Json)
                                 setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
                             }
@@ -85,28 +86,26 @@ val networkModule = module {
                         }
                     }
                     sendWithoutRequest { request ->
-                        !request.url.encodedPath.contains("/auth/")
+                        !ApiConfig.isAuthPublicPath(request.url.encodedPath)
                     }
                 }
             }
         }.apply {
-            plugin(io.ktor.client.plugins.HttpSend).intercept { request ->
-                if (!request.url.encodedPath.contains("/auth/")) {
+            plugin(HttpSend).intercept { request ->
+                if (!ApiConfig.isAuthPublicPath(request.url.encodedPath)) {
                     val access = sessionRepository.getAccessToken()
                     if (cu.uci.cisol.monitoreoambiental.data.util.JwtUtils.isTokenExpired(access)) {
-                        // Trigger a 401 manually or perform the refresh here.
-                        // Actually, Ktor's HttpSend can just do the refresh request directly.
                         val refresh = sessionRepository.getRefreshToken()
                         if (refresh != null) {
                             try {
-                                val refreshClient = io.ktor.client.HttpClient(Android) {
-                                    install(DefaultRequest) { 
-                                        header("x-client-type", "apk") 
-                                        header("X-App-Secret", cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.APP_SECRET)
+                                val refreshClient = HttpClient(Android) {
+                                    install(DefaultRequest) {
+                                        header("x-client-type", "apk")
+                                        header("X-App-Secret", ApiConfig.APP_SECRET)
                                     }
                                     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
                                 }
-                                val res = refreshClient.post("${cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.BASE_URL}/auth/token/refresh/") {
+                                val res = refreshClient.post("${ApiConfig.AUTH_BASE}/token/refresh/") {
                                     contentType(ContentType.Application.Json)
                                     setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
                                 }
@@ -114,7 +113,10 @@ val networkModule = module {
                                     val tokenResponse = res.body<cu.uci.cisol.monitoreoambiental.data.remote.dto.TokenResponseDto>()
                                     sessionRepository.saveTokens(tokenResponse.access, tokenResponse.refresh)
                                     request.headers.remove(io.ktor.http.HttpHeaders.Authorization)
-                                    request.headers.append(io.ktor.http.HttpHeaders.Authorization, "Bearer ${tokenResponse.access}")
+                                    request.headers.append(
+                                        io.ktor.http.HttpHeaders.Authorization,
+                                        "Bearer ${tokenResponse.access}",
+                                    )
                                 } else {
                                     sessionRepository.clearSession()
                                 }
@@ -133,4 +135,5 @@ val networkModule = module {
     single { cu.uci.cisol.monitoreoambiental.data.remote.UsersApi(get()) }
     single { cu.uci.cisol.monitoreoambiental.data.remote.ManagementApi(get()) }
     single { cu.uci.cisol.monitoreoambiental.data.remote.LocationsApi(get()) }
+    single { cu.uci.cisol.monitoreoambiental.data.remote.MultimediaApi(get()) }
 }

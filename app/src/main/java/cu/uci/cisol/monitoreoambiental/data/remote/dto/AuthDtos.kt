@@ -12,7 +12,12 @@ data class LoginRequestDto(
 @Serializable
 data class TokenResponseDto(
     val access: String,
-    val refresh: String
+    val refresh: String,
+    @SerialName("session_id") val sessionId: String? = null,
+    @SerialName("access_exp") val accessExp: String? = null,
+    @SerialName("refresh_exp") val refreshExp: String? = null,
+    @SerialName("inactivity_timeout") val inactivityTimeout: Int? = null,
+    val detail: String? = null,
 )
 
 @Serializable
@@ -27,24 +32,43 @@ data class LogoutRequestDto(
 
 @Serializable
 data class MessageResponseDto(
-    val message: String
+    val message: String? = null,
+    val detail: String? = null,
 )
 
 @Serializable
 data class ErrorDetailDto(
-    val detail: String
+    val detail: String? = null,
+    val code: String? = null,
+    @SerialName("retry_after") val retryAfter: Int? = null,
 )
 
 @Serializable
 data class RegisterRequestDto(
     val email: String,
+    @SerialName("user_name") val userName: String,
     @SerialName("first_name") val firstName: String,
     @SerialName("last_name") val lastName: String,
+    val phone: String? = null,
     val password: String,
-    val password1: String,
     val password2: String,
-    @SerialName("user_name") val userNameUnderscore: String,
-    val username: String
+)
+
+@Serializable
+data class OtpSentResponseDto(
+    val detail: String? = null,
+    val email: String? = null,
+)
+
+@Serializable
+data class VerifyRegistrationRequestDto(
+    val email: String,
+    val otp: String,
+)
+
+@Serializable
+data class ResendOtpRequestDto(
+    val email: String,
 )
 
 @Serializable

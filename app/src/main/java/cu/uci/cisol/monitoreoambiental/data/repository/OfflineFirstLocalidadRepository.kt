@@ -26,7 +26,7 @@ class OfflineFirstLocalidadRepository(
     override suspend fun syncLocalities(): EmptyResult<DataError> {
         return when (val result = locationsApi.getLocalities()) {
             is Result.Success -> {
-                val entities = result.data.localidades.map { it.toLocalidadEntity() }
+                val entities = result.data.results.map { it.toLocalidadEntity() }
                 localidadDao.clearAll()
                 localidadDao.insertAll(entities)
                 Result.Success(Unit)

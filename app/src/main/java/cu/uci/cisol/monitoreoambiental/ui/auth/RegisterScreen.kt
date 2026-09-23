@@ -28,17 +28,18 @@ import cu.uci.cisol.monitoreoambiental.R
 fun RegisterScreen(
     viewModel: AuthViewModel,
     onNavigateToLogin: () -> Unit,
+    onNavigateToHome: () -> Unit = {},
     snackbarHostState: SnackbarHostState
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    var showDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var passwordVisible by remember { mutableStateOf(false) }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
+                AuthEvent.LoginSuccess -> onNavigateToHome()
                 is AuthEvent.RegisterSuccess -> {
-                    showDialog = true
+                    snackbarHostState.showSnackbar(event.message.asString(context))
                 }
                 is AuthEvent.ShowSnackbar -> {
                     snackbarHostState.showSnackbar(event.message.asString(context))
@@ -48,26 +49,16 @@ fun RegisterScreen(
         }
     }
 
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showDialog = false
-                onNavigateToLogin()
-            },
-            title = { Text("Registro Exitoso") },
-            text = {
-                Text(
-                    "Los administradores revisaran la solicitud de registro y le notificaran cuando este aprobado para hacer login en la app."
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDialog = false
-                        onNavigateToLogin()
-                    }
-                ) { Text("Aceptar") }
-            }
+    if (state.showOtpVerification) {
+        OtpVerificationDialog(
+            email = state.otpEmail.ifBlank { state.email },
+            otp = state.otpCode,
+            isLoading = state.isLoading,
+            error = state.error?.asString(context),
+            onOtpChange = { viewModel.onAction(AuthAction.OnOtpChange(it)) },
+            onConfirm = { viewModel.onAction(AuthAction.SubmitOtpVerification) },
+            onResend = { viewModel.onAction(AuthAction.ResendOtp) },
+            onDismiss = { viewModel.onAction(AuthAction.DismissOtpVerification) },
         )
     }
 
@@ -108,7 +99,7 @@ fun RegisterScreen(
                 singleLine = true,
                 isError = state.error != null
             )
-            
+
             OutlinedTextField(
                 value = state.lastName,
                 onValueChange = { viewModel.onAction(AuthAction.OnLastNameChange(it)) },
@@ -165,7 +156,7 @@ fun RegisterScreen(
             isError = state.error != null
         )
 
-        if (state.error != null) {
+        if (state.error != null && !state.showOtpVerification) {
             Text(
                 text = state.error?.asString(context) ?: "",
                 color = MaterialTheme.colorScheme.error,
@@ -185,7 +176,7 @@ fun RegisterScreen(
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF005b82)),
             enabled = !state.isLoading
         ) {
-            if (state.isLoading) {
+            if (state.isLoading && !state.showOtpVerification) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
             } else {
                 Text("Registrar", fontSize = 18.sp, color = Color.White)

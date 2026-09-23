@@ -14,6 +14,12 @@ data class AuthState(
     val lastName: String = "",
     val username: String = "",
 
+    // OTP verification
+    val showOtpVerification: Boolean = false,
+    val otpCode: String = "",
+    val otpEmail: String = "",
+    val otpRetryAfterSeconds: Int? = null,
+
     // Conflict handling
     val conflictSessions: List<Session> = emptyList(),
     val isResolvingConflict: Boolean = false,
@@ -42,6 +48,11 @@ sealed interface AuthAction {
 
     object SubmitLogin : AuthAction
     object SubmitRegister : AuthAction
+
+    data class OnOtpChange(val otp: String) : AuthAction
+    object SubmitOtpVerification : AuthAction
+    object ResendOtp : AuthAction
+    object DismissOtpVerification : AuthAction
 
     data class OnSessionSelected(val sessionId: String, val selected: Boolean) : AuthAction
     object SubmitConflictResolution : AuthAction

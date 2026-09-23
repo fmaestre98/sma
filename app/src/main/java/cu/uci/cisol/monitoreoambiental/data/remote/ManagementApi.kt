@@ -10,10 +10,12 @@ import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.UpdateIncidenc
 import cu.uci.cisol.monitoreoambiental.data.util.getSafe
 import cu.uci.cisol.monitoreoambiental.data.util.postMultipartSafe
 import cu.uci.cisol.monitoreoambiental.data.util.patchSafe
+import cu.uci.cisol.monitoreoambiental.data.util.postSafe
 import cu.uci.cisol.monitoreoambiental.domain.util.DataError
 import cu.uci.cisol.monitoreoambiental.domain.util.Result
 import io.ktor.client.HttpClient
 import io.ktor.http.content.PartData
+import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.CreateIncidenciaRequestDto
 
 class ManagementApi(private val client: HttpClient) {
 
@@ -26,7 +28,7 @@ class ManagementApi(private val client: HttpClient) {
     }
 
     suspend fun getEstados(): Result<EstadosResponseDto, DataError.Network> {
-        return client.getSafe("$BASE_URL/states/?is_active=true")
+        return client.getSafe("$BASE_URL/incidence-states/?is_active=true")
     }
 
     suspend fun getIncidencias(
@@ -62,11 +64,17 @@ class ManagementApi(private val client: HttpClient) {
         return client.postMultipartSafe("$BASE_URL/incidences/") { formParts }
     }
 
+    suspend fun createIncidenciaJson(
+        body: CreateIncidenciaRequestDto,
+    ): Result<CreateIncidenciaResponseDto, DataError.Network> {
+        return client.postSafe("$BASE_URL/incidences/", body)
+    }
+
     suspend fun getOrganizations(): Result<OrganizationsResponseDto, DataError.Network> {
-        return client.getSafe("$BASE_URL/organization/", mapOf("page_size" to 1000))
+        return client.getSafe("$BASE_URL/organizations/", mapOf("page_size" to 1000))
     }
 
     suspend fun getAppearance(): Result<SystemAppearanceDto, DataError.Network> {
-        return client.getSafe("${ApiConfig.BASE_URL}/appearance/")
+        return client.getSafe("${ApiConfig.API_V1_BASE}/appearance/")
     }
 }

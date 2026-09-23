@@ -1,16 +1,17 @@
 package cu.uci.cisol.monitoreoambiental.data.repository
 
-import android.content.Context
 import cu.uci.cisol.monitoreoambiental.data.local.db.EstadoDao
 import cu.uci.cisol.monitoreoambiental.data.local.db.IncidenciaDao
 import cu.uci.cisol.monitoreoambiental.data.local.db.LocalidadDao
 import cu.uci.cisol.monitoreoambiental.data.local.db.TematicaDao
 import cu.uci.cisol.monitoreoambiental.data.local.entity.IncidenciaEntity
 import cu.uci.cisol.monitoreoambiental.data.remote.ManagementApi
+import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.CreateIncidenciaRequestDto
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.CreateIncidenciaResponseDto
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.IncidenciaListItemDto
+import cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.UpdateIncidenciaRequestDto
 import cu.uci.cisol.monitoreoambiental.data.util.CatalogResolver
-import cu.uci.cisol.monitoreoambiental.data.util.IncidenciaMultipartBuilder
+import cu.uci.cisol.monitoreoambiental.data.util.EvidenceUploadHelper
 import cu.uci.cisol.monitoreoambiental.data.util.IsoInstantFormat
 import cu.uci.cisol.monitoreoambiental.domain.model.Incidencia
 import cu.uci.cisol.monitoreoambiental.domain.model.SyncUploadResult
@@ -27,7 +28,7 @@ class IncidenciaRepositoryImpl(
     private val tematicaDao: TematicaDao,
     private val estadoDao: EstadoDao,
     private val localidadDao: LocalidadDao,
-    private val context: Context,
+    private val evidenceUploadHelper: EvidenceUploadHelper,
 ) : IncidenciaRepository {
 
     override suspend fun guardar(incidencia: Incidencia): Result<Unit> = runCatching {
@@ -84,7 +85,7 @@ class IncidenciaRepositoryImpl(
                 latitude = incidencia.latitud,
                 longitude = incidencia.longitud,
                 occurredAt = incidencia.fechaHora,
-                evidences = incidencia.imagenesPaths.filter { it.startsWith("http") },
+                evidences = incidencia.imagenesPaths,
                 assignedTo = incidencia.assignedToId,
                 isActive = incidencia.isActive,
                 language = incidencia.language ?: "es"
@@ -97,25 +98,50 @@ class IncidenciaRepositoryImpl(
                 )
             }
         } else {
-            val formParts = IncidenciaMultipartBuilder.buildCreateForm(context, incidencia)
-            when (val result = managementApi.createIncidencia(formParts)) {
-                is NetworkResult.Success -> {
-                    val response = result.data
-                    withContext(Dispatchers.IO) {
-                        val updated =
-                            incidencia.copy(
-                                serverId = response.id,
-                                sincronizado = true,
-                                esBorrador = false,
-                            )
-                        incidenciaDao.insertar(updated.toEntity())
-                    }
-                    kotlin.Result.success(Unit)
-                }
+            when (val upload = evidenceUploadHelper.resolveEvidenceIds(incidencia.imagenesPaths)) {
                 is NetworkResult.Error ->
-                    kotlin.Result.failure(
-                        Exception("Error de red al enviar incidencia: ${result.error}"),
+                    return kotlin.Result.failure(
+                        Exception("Error al subir evidencias: ${upload.error}"),
                     )
+                is NetworkResult.Success -> {
+                    val ocurredAt = IsoInstantFormat.formatFromEpochMilli(incidencia.fechaHora)
+                    val body = CreateIncidenciaRequestDto(
+                        theme = incidencia.tematicaId,
+                        locality = requireNotNull(incidencia.localidadId) { "localidadId requerida" },
+                        description = incidencia.descripcion,
+                        address = incidencia.address,
+                        latitude = incidencia.latitud?.toString()?.take(10),
+                        longitude = incidencia.longitud?.toString()?.take(10),
+                        ocurredAt = ocurredAt,
+                        evidences = upload.data,
+                        evidencesPublic = false,
+                        assignedTo = incidencia.assignedToId,
+                    )
+                    when (val result = managementApi.createIncidenciaJson(body)) {
+                        is NetworkResult.Success -> {
+                            val response = result.data
+                            val evidencePaths = response.evidences.mapNotNull { evidence ->
+                                cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.resolveMediaUrl(evidence.fileUrl)
+                            }.ifEmpty { upload.data }
+                            withContext(Dispatchers.IO) {
+                                val updated =
+                                    incidencia.copy(
+                                        serverId = response.id,
+                                        sincronizado = true,
+                                        esBorrador = false,
+                                        imagenesPaths = evidencePaths.ifEmpty { incidencia.imagenesPaths },
+                                        ticketNumber = response.ticketNumber,
+                                    )
+                                incidenciaDao.insertar(updated.toEntity())
+                            }
+                            kotlin.Result.success(Unit)
+                        }
+                        is NetworkResult.Error ->
+                            kotlin.Result.failure(
+                                Exception("Error de red al enviar incidencia: ${result.error}"),
+                            )
+                    }
+                }
             }
         }
     }
@@ -220,6 +246,22 @@ class IncidenciaRepositoryImpl(
         val localidadId = CatalogResolver.resolveLocalidadId(remote.locality, localidades)
             ?: existing?.localidadId
 
+        val themeName = remote.themeName
+            ?: tematicas.find { it.id == tematicaId }?.name
+            ?: remote.theme
+        val statusName = remote.statusName
+            ?: estados.find { it.id == estadoId }?.name
+            ?: remote.status
+        val localityName = remote.localityName
+            ?: localidades.find { it.id == localidadId }?.name
+            ?: remote.locality
+        val themeColor = remote.themeColor
+            ?: tematicas.find { it.id == tematicaId }?.colorHex
+            ?: existing?.themeColor
+        val statusColor = remote.statusColor
+            ?: estados.find { it.id == estadoId }?.colorHex
+            ?: existing?.statusColor
+
         val fechaHora = parseOcurredAt(remote.ocurredAt)
 
         val entity =
@@ -232,15 +274,20 @@ class IncidenciaRepositoryImpl(
                     esBorrador = false,
                     sincronizado = true,
                     ticketNumber = remote.ticketNumber,
-                    themeColor = remote.themeColor,
-                    statusColor = remote.statusColor,
-                    criticality = remote.criticality,
+                    themeColor = themeColor,
+                    statusColor = statusColor,
+                    criticality = remote.criticalityName ?: remote.criticality,
                     criticalityColor = remote.criticalityColor,
-                    themeName = remote.theme,
-                    statusName = remote.status,
-                    localityName = remote.locality,
+                    themeName = themeName,
+                    statusName = statusName,
+                    localityName = localityName,
                     reporterName = remote.reporterName,
                     assignedToName = remote.assignedToName,
+                    assignedToId = remote.assignedTo,
+                    address = remote.address ?: existing.address,
+                    descripcion = remote.description?.takeIf { it.isNotBlank() } ?: existing.descripcion,
+                    latitud = remote.latitude?.toDoubleOrNull() ?: existing.latitud,
+                    longitud = remote.longitude?.toDoubleOrNull() ?: existing.longitud,
                     updatedAt = remote.updatedAt,
                     language = remote.language,
                     isActive = remote.isActive,
@@ -251,25 +298,27 @@ class IncidenciaRepositoryImpl(
                     serverId = remote.id,
                     tematica = tematicaId,
                     localidadId = localidadId,
-                    descripcion = "",
+                    descripcion = remote.description.orEmpty(),
                     imagenesPaths = emptyList(),
                     imagenResolucionPath = null,
-                    latitud = null,
-                    longitud = null,
+                    latitud = remote.latitude?.toDoubleOrNull(),
+                    longitud = remote.longitude?.toDoubleOrNull(),
                     fechaHora = fechaHora,
                     estadoId = estadoId,
                     esBorrador = false,
                     sincronizado = true,
                     ticketNumber = remote.ticketNumber,
-                    themeColor = remote.themeColor,
-                    statusColor = remote.statusColor,
-                    criticality = remote.criticality,
+                    themeColor = themeColor,
+                    statusColor = statusColor,
+                    criticality = remote.criticalityName ?: remote.criticality,
                     criticalityColor = remote.criticalityColor,
-                    themeName = remote.theme,
-                    statusName = remote.status,
-                    localityName = remote.locality,
+                    themeName = themeName,
+                    statusName = statusName,
+                    localityName = localityName,
                     reporterName = remote.reporterName,
                     assignedToName = remote.assignedToName,
+                    assignedToId = remote.assignedTo,
+                    address = remote.address,
                     updatedAt = remote.updatedAt,
                     language = remote.language,
                     isActive = remote.isActive,
@@ -314,13 +363,27 @@ class IncidenciaRepositoryImpl(
                 ?: incidenciaDao.obtenerPorId(response.id)
 
         val tematicas = tematicaDao.getAllActive()
+        val estados = estadoDao.getAllActive()
         val localidades = localidadDao.getAllActive()
 
         val tematicaId = CatalogResolver.resolveTematicaId(response.theme, tematicas) ?: response.theme
         val localidadId =
             CatalogResolver.resolveLocalidadId(response.locality, localidades) ?: response.locality
-        val themeName = tematicas.find { it.id == response.theme }?.name ?: response.theme
-        val localityName = localidades.find { it.id == response.locality }?.name ?: response.locality
+        val estadoId = response.status?.let { CatalogResolver.resolveEstadoId(it, estados) }
+            ?: existing?.estadoId
+            ?: ""
+        val themeName = response.themeName
+            ?: tematicas.find { it.id == response.theme }?.name
+            ?: response.theme
+        val localityName = response.localityName
+            ?: localidades.find { it.id == response.locality }?.name
+            ?: response.locality
+        val statusName = response.statusName
+            ?: estados.find { it.id == estadoId }?.name
+            ?: existing?.statusName
+        val evidenceUrls = response.evidences.mapNotNull { evidence ->
+            cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.resolveMediaUrl(evidence.fileUrl)
+        }.ifEmpty { existing?.imagenesPaths.orEmpty() }
 
         val updated =
             (existing ?: IncidenciaEntity(
@@ -329,12 +392,12 @@ class IncidenciaRepositoryImpl(
                 tematica = tematicaId,
                 localidadId = localidadId,
                 descripcion = response.description,
-                imagenesPaths = emptyList(),
+                imagenesPaths = evidenceUrls,
                 imagenResolucionPath = null,
                 latitud = response.latitude?.toDoubleOrNull(),
                 longitud = response.longitude?.toDoubleOrNull(),
                 fechaHora = parseOcurredAt(response.ocurredAt),
-                estadoId = "",
+                estadoId = estadoId,
                 esBorrador = false,
                 sincronizado = true,
             )).copy(
@@ -352,6 +415,11 @@ class IncidenciaRepositoryImpl(
                 updatedAt = response.updatedAt,
                 themeName = themeName,
                 localityName = localityName,
+                statusName = statusName,
+                statusColor = response.statusColor ?: existing?.statusColor,
+                ticketNumber = response.ticketNumber ?: existing?.ticketNumber,
+                estadoId = estadoId.ifBlank { existing?.estadoId.orEmpty() },
+                imagenesPaths = evidenceUrls,
                 sincronizado = true,
                 esBorrador = false,
             )
@@ -383,8 +451,27 @@ class IncidenciaRepositoryImpl(
         isActive: Boolean,
         language: String
     ): Result<Unit> {
+        val uploadedIds = when (val upload = evidenceUploadHelper.resolveEvidenceIds(evidences)) {
+            is NetworkResult.Success -> upload.data
+            is NetworkResult.Error ->
+                return kotlin.Result.failure(Exception("Error al subir evidencias: ${upload.error}"))
+        }
+
+        val evidenceIds = if (evidences.isNotEmpty()) {
+            val remoteIds = when (val detail = managementApi.getIncidenciaDetail(id)) {
+                is NetworkResult.Success -> detail.data.evidences.map { it.id }
+                is NetworkResult.Error -> emptyList()
+            }
+            val existingUuids = evidences.filter {
+                it.matches(Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"))
+            }
+            (remoteIds + existingUuids + uploadedIds).distinct()
+        } else {
+            emptyList()
+        }
+
         val occurredAtIso = IsoInstantFormat.formatFromEpochMilli(occurredAt)
-        val body = cu.uci.cisol.monitoreoambiental.data.remote.dto.incidencia.UpdateIncidenciaRequestDto(
+        val body = UpdateIncidenciaRequestDto(
             isActive = isActive,
             language = language,
             theme = theme,
@@ -394,7 +481,8 @@ class IncidenciaRepositoryImpl(
             latitude = latitude?.toString(),
             longitude = longitude?.toString(),
             ocurredAt = occurredAtIso,
-            evidences = evidences,
+            evidences = evidenceIds,
+            evidencesPublic = false,
             assignedTo = assignedTo
         )
 
@@ -403,15 +491,26 @@ class IncidenciaRepositoryImpl(
                 val response = result.data
                 withContext(Dispatchers.IO) {
                     val existing = incidenciaDao.obtenerPorId(id)
+                        ?: incidenciaDao.obtenerPorServerId(id)
                     val tematicas = tematicaDao.getAllActive()
-                    val estados = estadoDao.getAllActive()
                     val localidades = localidadDao.getAllActive()
+                    val estados = estadoDao.getAllActive()
 
                     val tematicaId = CatalogResolver.resolveTematicaId(response.theme, tematicas) ?: response.theme
                     val localidadId = CatalogResolver.resolveLocalidadId(response.locality, localidades) ?: response.locality
-                    
-                    val themeName = tematicas.find { it.id == response.theme }?.name ?: response.theme
-                    val localityName = localidades.find { it.id == response.locality }?.name ?: response.locality
+                    val estadoId = response.status?.let { CatalogResolver.resolveEstadoId(it, estados) }
+                        ?: existing?.estadoId
+                        ?: ""
+
+                    val themeName = response.themeName
+                        ?: tematicas.find { it.id == response.theme }?.name
+                        ?: response.theme
+                    val localityName = response.localityName
+                        ?: localidades.find { it.id == response.locality }?.name
+                        ?: response.locality
+                    val evidencePaths = response.evidences.mapNotNull { evidence ->
+                        cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig.resolveMediaUrl(evidence.fileUrl)
+                    }.ifEmpty { existing?.imagenesPaths.orEmpty() }
 
                     val updated = (existing ?: IncidenciaEntity(
                         id = id,
@@ -423,7 +522,7 @@ class IncidenciaRepositoryImpl(
                         latitud = response.latitude?.toDoubleOrNull(),
                         longitud = response.longitude?.toDoubleOrNull(),
                         fechaHora = parseOcurredAt(response.ocurredAt),
-                        estadoId = existing?.estadoId ?: "",
+                        estadoId = estadoId,
                         esBorrador = false,
                         sincronizado = true
                     )).copy(
@@ -440,6 +539,11 @@ class IncidenciaRepositoryImpl(
                         updatedAt = response.updatedAt,
                         themeName = themeName,
                         localityName = localityName,
+                        statusName = response.statusName ?: existing?.statusName,
+                        statusColor = response.statusColor ?: existing?.statusColor,
+                        ticketNumber = response.ticketNumber ?: existing?.ticketNumber,
+                        estadoId = estadoId.ifBlank { existing?.estadoId.orEmpty() },
+                        imagenesPaths = evidencePaths,
                         sincronizado = true,
                         esBorrador = false
                     )

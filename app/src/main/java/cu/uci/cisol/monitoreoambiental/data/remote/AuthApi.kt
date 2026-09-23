@@ -13,8 +13,8 @@ import io.ktor.http.ContentType
 class AuthApi(private val client: HttpClient) {
 
     companion object {
-        val BASE_URL: String get() = "${ApiConfig.BASE_URL}/auth"
-        val USERS_BASE_URL: String get() = "${ApiConfig.BASE_URL}/api/v1/users"
+        val BASE_URL: String get() = ApiConfig.AUTH_BASE
+        val USERS_BASE_URL: String get() = "${ApiConfig.API_V1_BASE}/users"
     }
 
     suspend fun login(request: LoginRequestDto): io.ktor.client.statement.HttpResponse {
@@ -24,14 +24,22 @@ class AuthApi(private val client: HttpClient) {
         }
     }
 
-    suspend fun register(request: RegisterRequestDto): Result<MessageResponseDto, DataError.Network> {
+    suspend fun register(request: RegisterRequestDto): Result<OtpSentResponseDto, DataError.Network> {
         return client.postSafe("$BASE_URL/register/", request)
     }
-    
+
+    suspend fun verifyRegistration(request: VerifyRegistrationRequestDto): Result<TokenResponseDto, DataError.Network> {
+        return client.postSafe("$BASE_URL/verify-registration/", request)
+    }
+
+    suspend fun resendOtp(request: ResendOtpRequestDto): Result<OtpSentResponseDto, DataError.Network> {
+        return client.postSafe("$BASE_URL/resend-otp/", request)
+    }
+
     suspend fun logout(request: LogoutRequestDto): Result<MessageResponseDto, DataError.Network> {
         return client.postSafe("$BASE_URL/logout/", request)
     }
-    
+
     suspend fun terminateSessions(request: TerminateSessionsRequestDto): Result<MessageResponseDto, DataError.Network> {
         return client.postSafe("$BASE_URL/token/terminate-sessions/", request)
     }

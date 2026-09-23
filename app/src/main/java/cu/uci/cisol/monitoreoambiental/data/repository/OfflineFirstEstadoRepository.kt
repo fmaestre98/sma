@@ -27,7 +27,7 @@ class OfflineFirstEstadoRepository(
         val result = managementApi.getEstados()
         return when (result) {
             is Result.Success -> {
-                val entities = result.data.estados.map { it.toEstadoEntity() }
+                val entities = result.data.results.map { it.toEstadoEntity() }
                 estadoDao.clearAll()
                 estadoDao.insertAll(entities)
                 Result.Success(Unit)
