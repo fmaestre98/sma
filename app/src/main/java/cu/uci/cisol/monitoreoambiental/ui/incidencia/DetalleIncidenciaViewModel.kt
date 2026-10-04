@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -323,26 +322,24 @@ class DetalleIncidenciaViewModel(
                 }
             }
 
-            val result = withTimeoutOrNull(18000L) {
-                incidenciaRepository.actualizarRemoto(
-                    id = remoteId,
-                    theme = current.tematicaId!!,
-                    locality = current.localidadId!!,
-                    description = current.descripcion,
-                    address = current.address.takeIf { it.isNotBlank() },
-                    latitude = current.latitud,
-                    longitude = current.longitud,
-                    occurredAt = fechaHoraOriginal,
-                    evidences = evidencePaths,
-                    assignedTo = current.assignedToId,
-                    isActive = !current.marcadaResuelta,
-                    language = current.language,
-                )
-            }
+            val result = incidenciaRepository.actualizarRemoto(
+                id = remoteId,
+                theme = current.tematicaId!!,
+                locality = current.localidadId!!,
+                description = current.descripcion,
+                address = current.address.takeIf { it.isNotBlank() },
+                latitude = current.latitud,
+                longitude = current.longitud,
+                occurredAt = fechaHoraOriginal,
+                evidences = evidencePaths,
+                assignedTo = current.assignedToId,
+                isActive = !current.marcadaResuelta,
+                language = current.language,
+            )
 
             _state.update { it.copy(isSaving = false) }
 
-            if (result != null && result.isSuccess) {
+            if (result.isSuccess) {
                 _events.send(DetalleIncidenciaEvent.ShowSnackbar("Incidencia actualizada"))
                 _events.send(DetalleIncidenciaEvent.NavigateBack)
             } else {

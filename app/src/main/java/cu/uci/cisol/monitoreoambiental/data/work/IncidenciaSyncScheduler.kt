@@ -28,9 +28,13 @@ object IncidenciaSyncScheduler {
                 .setConstraints(networkConstraints())
                 .build()
 
+        android.util.Log.i(
+            "IncidenciaSync",
+            "Encolando envío de pendientes: workId=${request.id}, policy=APPEND_OR_REPLACE",
+        )
         WorkManager.getInstance(context).enqueueUniqueWork(
             UPLOAD_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             request,
         )
     }

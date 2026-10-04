@@ -6,16 +6,13 @@ import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.request.header
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
-import io.ktor.client.plugins.auth.Auth
-import io.ktor.client.plugins.auth.providers.BearerTokens
-import io.ktor.client.plugins.auth.providers.bearer
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logger
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.plugins.logging.SIMPLE
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -24,13 +21,25 @@ import io.ktor.http.ContentType
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpSend
 import io.ktor.client.plugins.plugin
+import io.ktor.http.HttpHeaders
 import io.ktor.http.encodedPath
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koin.dsl.module
 
 val networkModule = module {
     single {
         val sessionRepository: SessionRepository = get()
+        val refreshMutex = Mutex()
         HttpClient(Android) {
+            // Media uploads and incidence creation are separate requests. A short
+            // default timeout makes the complete offline sync fail on slow links.
+            install(HttpTimeout) {
+                requestTimeoutMillis = 120_000
+                connectTimeoutMillis = 15_000
+                socketTimeoutMillis = 120_000
+            }
             install(DefaultRequest) {
                 header("x-client-type", "apk")
                 header("X-App-Secret", ApiConfig.APP_SECRET)
@@ -48,85 +57,65 @@ val networkModule = module {
                     }
                 )
             }
-            install(Auth) {
-                bearer {
-                    loadTokens {
-                        runBlocking {
-                            val access = sessionRepository.getAccessToken()
-                            val refresh = sessionRepository.getRefreshToken()
-                            if (access != null && refresh != null) {
-                                BearerTokens(access, refresh)
-                            } else null
-                        }
-                    }
-                    refreshTokens {
-                        val refresh = sessionRepository.getRefreshToken() ?: return@refreshTokens null
-                        try {
-                            val client = HttpClient(Android) {
-                                install(DefaultRequest) {
-                                    header("x-client-type", "apk")
-                                    header("X-App-Secret", ApiConfig.APP_SECRET)
-                                }
-                                install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-                            }
-                            val response = client.post("${ApiConfig.AUTH_BASE}/token/refresh/") {
-                                contentType(ContentType.Application.Json)
-                                setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
-                            }
-                            if (response.status.value in 200..299) {
-                                val tokenResponse = response.body<cu.uci.cisol.monitoreoambiental.data.remote.dto.TokenResponseDto>()
-                                sessionRepository.saveTokens(tokenResponse.access, tokenResponse.refresh)
-                                BearerTokens(tokenResponse.access, tokenResponse.refresh)
-                            } else {
-                                sessionRepository.clearSession()
-                                null
-                            }
-                        } catch (e: Exception) {
-                            null
-                        }
-                    }
-                    sendWithoutRequest { request ->
-                        !ApiConfig.isAuthPublicPath(request.url.encodedPath)
-                    }
-                }
-            }
         }.apply {
             plugin(HttpSend).intercept { request ->
                 if (!ApiConfig.isAuthPublicPath(request.url.encodedPath)) {
-                    val access = sessionRepository.getAccessToken()
+                    var access = sessionRepository.getAccessToken()
                     if (cu.uci.cisol.monitoreoambiental.data.util.JwtUtils.isTokenExpired(access)) {
-                        val refresh = sessionRepository.getRefreshToken()
-                        if (refresh != null) {
-                            try {
-                                val refreshClient = HttpClient(Android) {
-                                    install(DefaultRequest) {
-                                        header("x-client-type", "apk")
-                                        header("X-App-Secret", ApiConfig.APP_SECRET)
-                                    }
-                                    install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
-                                }
-                                val res = refreshClient.post("${ApiConfig.AUTH_BASE}/token/refresh/") {
-                                    contentType(ContentType.Application.Json)
-                                    setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
-                                }
-                                if (res.status.value in 200..299) {
-                                    val tokenResponse = res.body<cu.uci.cisol.monitoreoambiental.data.remote.dto.TokenResponseDto>()
-                                    sessionRepository.saveTokens(tokenResponse.access, tokenResponse.refresh)
-                                    request.headers.remove(io.ktor.http.HttpHeaders.Authorization)
-                                    request.headers.append(
-                                        io.ktor.http.HttpHeaders.Authorization,
-                                        "Bearer ${tokenResponse.access}",
-                                    )
-                                } else {
+                        refreshMutex.withLock {
+                            // Another request may have refreshed the session while this
+                            // request waited for the lock, so read the latest tokens again.
+                            access = sessionRepository.getAccessToken()
+                            if (cu.uci.cisol.monitoreoambiental.data.util.JwtUtils.isTokenExpired(access)) {
+                                val refresh = sessionRepository.getRefreshToken()
+                                if (refresh == null) {
                                     sessionRepository.clearSession()
+                                    access = null
+                                } else {
+                                    val refreshClient = HttpClient(Android) {
+                                        install(DefaultRequest) {
+                                            header("x-client-type", "apk")
+                                            header("X-App-Secret", ApiConfig.APP_SECRET)
+                                        }
+                                        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+                                    }
+                                    try {
+                                        val res = refreshClient.post("${ApiConfig.AUTH_BASE}/token/refresh/") {
+                                            contentType(ContentType.Application.Json)
+                                            setBody(cu.uci.cisol.monitoreoambiental.data.remote.dto.RefreshRequestDto(refresh))
+                                        }
+                                        if (res.status.value in 200..299) {
+                                            val tokenResponse = res.body<cu.uci.cisol.monitoreoambiental.data.remote.dto.TokenResponseDto>()
+                                            sessionRepository.saveTokens(tokenResponse.access, tokenResponse.refresh)
+                                            access = tokenResponse.access
+                                        } else {
+                                            sessionRepository.clearSession()
+                                            access = null
+                                        }
+                                    } catch (e: CancellationException) {
+                                        throw e
+                                    } catch (_: Exception) {
+                                        sessionRepository.clearSession()
+                                        access = null
+                                    } finally {
+                                        refreshClient.close()
+                                    }
                                 }
-                            } catch (e: Exception) {
-                                // Ignore, let the original request proceed and fail
                             }
                         }
                     }
+                    request.headers.remove(HttpHeaders.Authorization)
+                    if (!access.isNullOrBlank() &&
+                        !cu.uci.cisol.monitoreoambiental.data.util.JwtUtils.isTokenExpired(access)
+                    ) {
+                        request.headers.append(HttpHeaders.Authorization, "Bearer $access")
+                    }
                 }
-                this.execute(request)
+                val call = this.execute(request)
+                if (!ApiConfig.isAuthPublicPath(request.url.encodedPath) && call.response.status.value == 401) {
+                    sessionRepository.clearSession()
+                }
+                call
             }
         }
     }

@@ -156,15 +156,40 @@ class IncidenciaRepositoryImpl(
 
     override suspend fun enviarPendientesAlServidor(): Result<SyncUploadResult> {
         val pendientes = obtenerPendientes()
+        android.util.Log.i("IncidenciaSync", "Pendientes encontrados: ${pendientes.size}")
         var enviadas = 0
         var fallidas = 0
         for (incidencia in pendientes) {
-            if (enviarAlServidor(incidencia).isSuccess) {
-                enviadas++
-            } else {
+            try {
+                val result = enviarAlServidor(incidencia)
+                if (result.isSuccess) {
+                    enviadas++
+                    android.util.Log.i(
+                        "IncidenciaSync",
+                        "Incidencia enviada: localId=${incidencia.id}, serverId=${incidencia.serverId ?: "nueva"}",
+                    )
+                } else {
+                    fallidas++
+                    android.util.Log.w(
+                        "IncidenciaSync",
+                        "Falló incidencia localId=${incidencia.id}: ${result.exceptionOrNull()?.message ?: "error sin detalle"}",
+                    )
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 fallidas++
+                android.util.Log.e(
+                    "IncidenciaSync",
+                    "Excepción enviando incidencia localId=${incidencia.id}",
+                    e,
+                )
             }
         }
+        android.util.Log.i(
+            "IncidenciaSync",
+            "Lote terminado: enviadas=$enviadas, fallidas=$fallidas",
+        )
         return kotlin.Result.success(SyncUploadResult(enviadas = enviadas, fallidas = fallidas))
     }
 

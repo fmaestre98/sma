@@ -51,6 +51,15 @@ class MainActivity : ComponentActivity() {
                 val isSessionActive by authViewModel.isSessionActive.collectAsState(initial = null)
                 val snackbarHostState = androidx.compose.runtime.remember { androidx.compose.material3.SnackbarHostState() }
 
+                LaunchedEffect(isSessionActive) {
+                    if (isSessionActive == false && navController.currentDestination?.route != "login") {
+                        navController.navigate("login") {
+                            popUpTo(navController.graph.startDestinationId) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                }
+
                 splashScreen.setKeepOnScreenCondition { isSessionActive == null }
 
                 if (isSessionActive != null) {

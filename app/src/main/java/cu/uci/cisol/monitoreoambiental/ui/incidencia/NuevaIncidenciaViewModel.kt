@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import java.util.UUID
 
 enum class FormMode { CREAR, EDITAR }
@@ -369,10 +368,13 @@ class NuevaIncidenciaViewModel(
                 }
 
                 if (!esBorradorFinal) {
-                    val sendResult = withTimeoutOrNull(18000L) {
-                        incidenciaRepository.enviarAlServidor(incidencia)
-                    }
-                    if (sendResult == null || sendResult.isFailure) {
+                    val sendResult = incidenciaRepository.enviarAlServidor(incidencia)
+                    if (sendResult.isFailure) {
+                        android.util.Log.w(
+                            "IncidenciaSync",
+                            "Fallo el envío inmediato; queda guardada localmente: localId=${incidencia.id}, error=${sendResult.exceptionOrNull()?.message}",
+                            sendResult.exceptionOrNull(),
+                        )
                         IncidenciaSyncScheduler.enqueueUploadPending(appContext)
                         _events.send(
                             NuevaIncidenciaEvent.ShowSnackbar(
