@@ -36,6 +36,7 @@ fun AuthError.toUiText(): UiText {
         is AuthError.AccountNotVerified -> UiText.StringResource(R.string.error_account_not_verified)
         is AuthError.OtpRequired -> UiText.StringResource(R.string.success_register)
         is AuthError.OtpError -> UiText.DynamicString(message)
+        is AuthError.ServerMessage -> UiText.DynamicString(message)
         AuthError.InvalidCredentials -> UiText.StringResource(R.string.error_invalid_credentials)
         is AuthError.MultipleSessions -> UiText.StringResource(R.string.error_multiple_sessions)
         is AuthError.NetworkError -> error.toUiText()

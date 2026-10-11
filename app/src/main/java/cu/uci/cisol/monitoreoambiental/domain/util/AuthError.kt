@@ -8,6 +8,7 @@ sealed interface AuthError : Error {
     data class AccountNotVerified(val email: String, val message: String) : AuthError
     data class OtpRequired(val email: String) : AuthError
     data class OtpError(val message: String, val retryAfter: Int? = null) : AuthError
+    data class ServerMessage(val message: String) : AuthError
     data class NetworkError(val error: DataError.Network) : AuthError
     object InvalidCredentials : AuthError
     object Unknown : AuthError

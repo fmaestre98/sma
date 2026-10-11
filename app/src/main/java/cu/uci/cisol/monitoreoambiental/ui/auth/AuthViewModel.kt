@@ -6,6 +6,7 @@ import cu.uci.cisol.monitoreoambiental.R
 import cu.uci.cisol.monitoreoambiental.domain.model.AuthCredentials
 import cu.uci.cisol.monitoreoambiental.domain.model.RegistrationRequest
 import cu.uci.cisol.monitoreoambiental.data.remote.ApiConfig
+import cu.uci.cisol.monitoreoambiental.data.remote.AuthApi
 import cu.uci.cisol.monitoreoambiental.domain.repository.AuthRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.SessionRepository
 import cu.uci.cisol.monitoreoambiental.domain.repository.EstadoRepository
@@ -30,6 +31,7 @@ class AuthViewModel(
     private val tematicaRepository: TematicaRepository,
     private val estadoRepository: EstadoRepository,
     private val localidadRepository: LocalidadRepository,
+    private val authApi: AuthApi,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AuthState())
@@ -39,6 +41,21 @@ class AuthViewModel(
     val events = _events.receiveAsFlow()
 
     val isSessionActive = sessionRepository.accessTokenFlow.map { it != null }
+
+    init {
+        refreshPublicConfig()
+    }
+
+    private fun refreshPublicConfig() {
+        viewModelScope.launch {
+            val config = authApi.getPublicSystemConfig()
+            if (config is Result.Success) {
+                _state.update { it.copy(allowRegistration = config.data.allowRegistration) }
+            } else {
+                _state.update { it.copy(allowRegistration = false) }
+            }
+        }
+    }
 
     fun onAction(action: AuthAction) {
         when (action) {
@@ -56,6 +73,7 @@ class AuthViewModel(
                 }
             }
             AuthAction.SubmitRegister -> {
+                if (!_state.value.allowRegistration) return
                 val currentState = _state.value
                 if (currentState.email.isBlank() || currentState.password.isBlank() || currentState.firstName.isBlank() || currentState.lastName.isBlank() || currentState.username.isBlank()) {
                     _state.update { it.copy(error = UiText.DynamicString("Por favor llene todos los campos")) }
@@ -114,6 +132,8 @@ class AuthViewModel(
                     ApiConfig.BASE_URL = url
                     val prefs = action.context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
                     prefs.edit().putString("base_url", url).apply()
+                    _state.update { it.copy(allowRegistration = false) }
+                    refreshPublicConfig()
                 }
                 _state.update { it.copy(showUrlConfigDialog = false) }
             }

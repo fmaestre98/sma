@@ -2,6 +2,7 @@ package cu.uci.cisol.monitoreoambiental.data.remote
 
 import cu.uci.cisol.monitoreoambiental.data.remote.dto.*
 import cu.uci.cisol.monitoreoambiental.data.util.postSafe
+import cu.uci.cisol.monitoreoambiental.data.util.getSafe
 import cu.uci.cisol.monitoreoambiental.domain.util.DataError
 import cu.uci.cisol.monitoreoambiental.domain.util.Result
 import io.ktor.client.HttpClient
@@ -24,8 +25,11 @@ class AuthApi(private val client: HttpClient) {
         }
     }
 
-    suspend fun register(request: RegisterRequestDto): Result<OtpSentResponseDto, DataError.Network> {
-        return client.postSafe("$BASE_URL/register/", request)
+    suspend fun register(request: RegisterRequestDto): io.ktor.client.statement.HttpResponse {
+        return client.post("$BASE_URL/register/") {
+            setBody(request)
+            contentType(ContentType.Application.Json)
+        }
     }
 
     suspend fun verifyRegistration(request: VerifyRegistrationRequestDto): Result<TokenResponseDto, DataError.Network> {
@@ -46,5 +50,9 @@ class AuthApi(private val client: HttpClient) {
 
     suspend fun requestPasswordReset(request: PasswordResetRequestDto): Result<MessageResponseDto, DataError.Network> {
         return client.postSafe("$USERS_BASE_URL/request-password-reset/", request)
+    }
+
+    suspend fun getPublicSystemConfig(): Result<PublicSystemConfigDto, DataError.Network> {
+        return client.getSafe("${ApiConfig.API_V1_BASE}/system-config/public/")
     }
 }

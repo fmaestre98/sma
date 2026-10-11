@@ -17,23 +17,49 @@ class SincronizarIncidenciasWorker(
     private val sessionRepository: SessionRepository by inject()
 
     override suspend fun doWork(): Result {
-        android.util.Log.d("SyncWorker", "Iniciando worker de sincronización...")
+        val startedAt = android.os.SystemClock.elapsedRealtime()
+        android.util.Log.i(
+            TAG,
+            "Pull iniciado: id=$id, intento=$runAttemptCount, pageSize=$PAGE_SIZE",
+        )
         if (sessionRepository.getAccessToken() == null) {
-            android.util.Log.d("SyncWorker", "No hay token, cancelando sincronización")
+            android.util.Log.w(TAG, "Pull omitido: no hay access token; no se programará reintento")
             return Result.success()
         }
 
-        val syncResult = incidenciaRepository.syncCompletoDesdeServidor(pageSize = PAGE_SIZE)
-        return if (syncResult.isSuccess) {
-            android.util.Log.d("SyncWorker", "Sincronización completada con éxito")
-            Result.success()
-        } else {
-            android.util.Log.e("SyncWorker", "Error en sincronización, reintentando...")
+        return try {
+            val syncResult = incidenciaRepository.syncCompletoDesdeServidor(pageSize = PAGE_SIZE)
+            val elapsedMs = android.os.SystemClock.elapsedRealtime() - startedAt
+            if (syncResult.isSuccess) {
+                android.util.Log.i(
+                    TAG,
+                    "Pull completado: registros=${syncResult.getOrThrow()}, elapsedMs=$elapsedMs",
+                )
+                Result.success()
+            } else {
+                val error = syncResult.exceptionOrNull()
+                android.util.Log.e(
+                    TAG,
+                    "Pull fallido; WorkManager reintentará: intento=$runAttemptCount, elapsedMs=$elapsedMs, error=${error?.message}",
+                    error,
+                )
+                Result.retry()
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val elapsedMs = android.os.SystemClock.elapsedRealtime() - startedAt
+            android.util.Log.e(
+                TAG,
+                "Excepción no controlada en pull; WorkManager reintentará: intento=$runAttemptCount, elapsedMs=$elapsedMs",
+                e,
+            )
             Result.retry()
         }
     }
 
     companion object {
+        private const val TAG = "IncidenciaSync"
         const val PAGE_SIZE = 50
     }
 }

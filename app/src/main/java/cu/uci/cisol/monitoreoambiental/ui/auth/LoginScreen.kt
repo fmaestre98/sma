@@ -215,7 +215,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        Row {
+        if (state.allowRegistration) Row {
             Text("¿No posee cuenta? ", color = Color.Gray)
             Text(
                 text = "Registrar",

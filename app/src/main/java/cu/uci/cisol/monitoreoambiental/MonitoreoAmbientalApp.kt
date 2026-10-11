@@ -41,5 +41,6 @@ class MonitoreoAmbientalApp : Application(), Configuration.Provider {
         }
 
         IncidenciaSyncScheduler.schedulePeriodicPullSync(this)
+        IncidenciaSyncScheduler.recoverAppendedUploadChain(this)
     }
 }

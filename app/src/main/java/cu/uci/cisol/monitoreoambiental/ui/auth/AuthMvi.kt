@@ -6,6 +6,7 @@ import cu.uci.cisol.monitoreoambiental.ui.util.UiText
 data class AuthState(
     val isLoading: Boolean = false,
     val isLoginMode: Boolean = true,
+    val allowRegistration: Boolean = false,
 
     // Form fields
     val email: String = "",

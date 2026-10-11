@@ -225,6 +225,10 @@ class IncidenciaRepositoryImpl(
         search: String?,
         ordering: String?,
     ): Result<Pair<Int, Int>> {
+        android.util.Log.d(
+            "IncidenciaSync",
+            "Solicitando página del pull: page=$page, pageSize=$pageSize, ordering=$ordering",
+        )
         return when (
             val result =
                 managementApi.getIncidencias(
@@ -235,6 +239,10 @@ class IncidenciaRepositoryImpl(
                 )
         ) {
             is NetworkResult.Success -> {
+                android.util.Log.d(
+                    "IncidenciaSync",
+                    "Página recibida: page=$page, registros=${result.data.results.size}, total=${result.data.count}",
+                )
                 withContext(Dispatchers.IO) {
                     val tematicas = tematicaDao.getAllActive()
                     val estados = estadoDao.getAllActive()
@@ -248,10 +256,15 @@ class IncidenciaRepositoryImpl(
                     Pair(result.data.count, result.data.results.size),
                 )
             }
-            is NetworkResult.Error ->
+            is NetworkResult.Error -> {
+                android.util.Log.e(
+                    "IncidenciaSync",
+                    "Falló request del pull: page=$page, error=${result.error}",
+                )
                 kotlin.Result.failure(
                     Exception("Error al sincronizar incidencias: ${result.error}"),
                 )
+            }
         }
     }
 

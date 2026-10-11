@@ -30,6 +30,7 @@ object ApiConfig {
             encodedPath.contains("/api/v1/auth/token/refresh/") ||
             encodedPath.contains("/api/v1/auth/register/") ||
             encodedPath.contains("/api/v1/auth/verify-registration/") ||
-            encodedPath.contains("/api/v1/auth/resend-otp/")
+            encodedPath.contains("/api/v1/auth/resend-otp/") ||
+            encodedPath.contains("/api/v1/system-config/public/")
     }
 }

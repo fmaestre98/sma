@@ -11,9 +11,15 @@ import cu.uci.cisol.monitoreoambiental.domain.util.DataError
 import cu.uci.cisol.monitoreoambiental.domain.util.EmptyResult
 import cu.uci.cisol.monitoreoambiental.domain.util.Result
 import io.ktor.client.call.body
+import io.ktor.client.statement.bodyAsText
 import kotlinx.coroutines.CancellationException
 import java.nio.channels.UnresolvedAddressException
 import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
 
 class AuthRepositoryImpl(
     private val api: AuthApi,
@@ -56,6 +62,13 @@ class AuthRepositoryImpl(
                     val conflictDto = response.body<MultipleSessionsConflictDto>()
                     Result.Error(AuthError.MultipleSessions(conflictDto.activeSessions.map { it.toSession() }))
                 }
+                429 -> {
+                    val errorDto = runCatching { response.body<ErrorDetailDto>() }.getOrNull()
+                    Result.Error(AuthError.OtpError(
+                        errorDto?.detail ?: "Demasiados intentos. Intente de nuevo más tarde.",
+                        errorDto?.retryAfter,
+                    ))
+                }
                 else -> Result.Error(AuthError.InvalidCredentials)
             }
         } catch (e: UnresolvedAddressException) {
@@ -78,9 +91,30 @@ class AuthRepositoryImpl(
             password2 = request.contrasena,
         )
 
-        return when (val result = api.register(dto)) {
-            is Result.Success -> Result.Success(Unit)
-            is Result.Error -> mapNetworkAuthError(result.error)
+        return try {
+            val response = api.register(dto)
+            if (response.status.value in 200..299) return Result.Success(Unit)
+            val payload = response.bodyAsText()
+            val data = runCatching { Json.parseToJsonElement(payload) as? JsonObject }.getOrNull()
+            val code = (data?.get("code") as? JsonPrimitive)?.contentOrNull
+            val detail = (data?.get("detail") as? JsonPrimitive)?.contentOrNull
+            val fieldMessage = data?.entries
+                ?.filter { it.key != "code" && it.key != "detail" }
+                ?.flatMap { (_, value) ->
+                    when (value) {
+                        is JsonPrimitive -> listOfNotNull(value.contentOrNull)
+                        is kotlinx.serialization.json.JsonArray -> value.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+                        else -> emptyList()
+                    }
+                }?.firstOrNull()
+            when {
+                code == "registration_disabled" -> Result.Error(AuthError.ServerMessage(detail ?: "El registro de nuevos usuarios está deshabilitado."))
+                response.status.value == 429 -> Result.Error(AuthError.OtpError(detail ?: "Demasiados intentos. Intente de nuevo más tarde.", (data?.get("retry_after") as? JsonPrimitive)?.intOrNull))
+                else -> Result.Error(AuthError.ServerMessage(detail ?: fieldMessage ?: "No se pudo completar el registro. Revise los datos e inténtelo de nuevo."))
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Result.Error(AuthError.NetworkError(DataError.Network.UNKNOWN))
         }
     }
 
