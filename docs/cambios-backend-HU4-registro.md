@@ -49,3 +49,15 @@ El formulario APK envía JSON con estas keys:
 - `apps/users/tests/test_otp_registration.py` — pruebas del flujo OTP y contrato HTTP.
 
 **Condición para cerrar la brecha:** desplegar esos cambios backend y verificar que un registro acepta y conserva `country` más el identificador condicional, y que duplicados de CI/pasaporte producen errores de campo sin crear cuentas ni disparar OTP.
+
+## Dependencias del perfil (HU 5)
+
+El APK también necesita esos datos en el ciclo de perfil. El backend revisado no devuelve `country`, `ci` ni `passport` en `GET /api/v1/users/me/` (`LogguedUserSerializer`), y `UserAccount` no define esos campos. El serializer actual no persiste `ci`/`passport` porque no declara esos campos; DRF puede ignorarlos y responder éxito, por lo que el cliente no debe asumir que quedaron guardados. Para completar el perfil:
+
+- Exponer `country`, `ci` y `passport` como campos de lectura en `LogguedUserSerializer` y en la respuesta de actualización.
+- Permitir que el propio usuario complete una identificación vacía: CI para Cuba o pasaporte para otro país. Una identificación ya establecida debe quedar de solo lectura para el usuario. Validar formato y unicidad en serializer/servicio y base de datos, sin abrir edición de identidad para otras cuentas a roles normales.
+- Mantener `email` como solo lectura para el usuario autenticado; `user_name` sí debe ser editable con las reglas HU (8–15 y unicidad). Hoy el serializer backend usa 5–20 caracteres; alinear el máximo/mínimo con HU evita diferencias entre clientes.
+- Mantener país de cuenta autorregistrada en solo lectura. Las cuentas creadas por administrador necesitan país para determinar qué campo de identificación mostrar; hoy la respuesta no lo aporta.
+- La APK actual envía `user_name`, `first_name`, `last_name`, `phone` y, al completar un vacío, `ci` o `passport`; deja de mandar `email`. Si hay foto, esos mismos datos viajan multipart.
+
+La HU 6 sí cuenta con soporte de backend: `UserAccountSerializer` acepta `current_password`, `new_password`, `confirm_password`; valida contraseña actual, coincidencia y la política configurada por `validate_password`. `UserService.update` audita el cambio y termina otras sesiones, manteniendo la actual. Revisar que la configuración de validadores Django exija explícitamente mínimo 12 caracteres, mayúscula, minúscula, dígito y carácter especial, ya que el serializer usa validadores configurables.

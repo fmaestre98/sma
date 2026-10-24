@@ -10,6 +10,8 @@ import cu.uci.cisol.monitoreoambiental.data.local.entity.OrganizationEntity
 import cu.uci.cisol.monitoreoambiental.data.local.entity.TematicaEntity
 import cu.uci.cisol.monitoreoambiental.data.local.db.SystemAppearanceEntity
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @TypeConverters(Converters::class)
 @Database(
@@ -22,7 +24,7 @@ import androidx.room.TypeConverters
         OrganizationEntity::class,
         SystemAppearanceEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class MonitoreoDatabase : RoomDatabase() {
@@ -33,4 +35,14 @@ abstract class MonitoreoDatabase : RoomDatabase() {
     abstract val localidadDao: LocalidadDao
     abstract val organizationDao: OrganizationDao
     abstract val systemAppearanceDao: SystemAppearanceDao
+
+    companion object {
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN country TEXT")
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN ci TEXT")
+                db.execSQL("ALTER TABLE usuarios ADD COLUMN passport TEXT")
+            }
+        }
+    }
 }

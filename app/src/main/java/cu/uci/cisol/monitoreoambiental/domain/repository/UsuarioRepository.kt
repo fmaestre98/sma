@@ -14,10 +14,13 @@ interface UsuarioRepository {
     
     suspend fun refreshProfile(): Result<Unit, DataError.Network>
     suspend fun updateProfile(
+        userName: String,
         firstName: String?,
         lastName: String?,
         phone: String,
-        email: String,
-        avatarUri: String? // Assuming we handle URI in the repository or viewmodel
-    ): Result<Unit, DataError.Network>
+        ci: String?,
+        passport: String?,
+        avatarUri: String?,
+    ): Result<Unit, ProfileError>
+    suspend fun changePassword(currentPassword: String, newPassword: String, confirmation: String): Result<Unit, ProfileError>
 }

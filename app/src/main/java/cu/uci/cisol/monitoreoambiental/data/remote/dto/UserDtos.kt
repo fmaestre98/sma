@@ -12,7 +12,10 @@ data class UserDto(
     @SerialName("last_name") val lastName: String?,
     val phone: String,
     val role: String,
-    @SerialName("avatar_url") val avatarUrl: String?
+    @SerialName("avatar_url") val avatarUrl: String?,
+    val country: String? = null,
+    val ci: String? = null,
+    val passport: String? = null,
 )
 
 @Serializable
@@ -22,8 +25,17 @@ data class UserResponseDto(
 
 @Serializable
 data class UpdateUserRequestDto(
+    @SerialName("user_name") val userName: String? = null,
     @SerialName("first_name") val firstName: String? = null,
     @SerialName("last_name") val lastName: String? = null,
     val phone: String? = null,
-    val email: String? = null
+    val ci: String? = null,
+    val passport: String? = null,
+)
+
+@Serializable
+data class ChangePasswordRequestDto(
+    @SerialName("current_password") val currentPassword: String,
+    @SerialName("new_password") val newPassword: String,
+    @SerialName("confirm_password") val confirmPassword: String,
 )

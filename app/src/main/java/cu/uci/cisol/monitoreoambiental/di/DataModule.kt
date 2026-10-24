@@ -14,6 +14,7 @@ val dataModule = module {
                         MonitoreoDatabase::class.java,
                         "monitoreo_ambiental_db"
                 )
+                .addMigrations(MonitoreoDatabase.MIGRATION_7_8)
                 .fallbackToDestructiveMigration()
                 .build()
     }
