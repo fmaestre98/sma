@@ -2,6 +2,7 @@ package cu.uci.cisol.monitoreoambiental.ui.incidencia
 
 import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import cu.uci.cisol.monitoreoambiental.domain.model.EstadoIncidencia
 
@@ -55,6 +57,9 @@ import org.mapsforge.map.layer.cache.TileCache
 import org.mapsforge.map.layer.renderer.TileRendererLayer
 import org.mapsforge.map.reader.MapFile
 import android.app.Application
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.ui.window.Dialog
@@ -144,9 +149,11 @@ fun NuevaIncidenciaScreen(
             onDismissRequest = { onAction(NuevaIncidenciaAction.OnCerrarMapa) },
             title = { Text("Seleccionar lugar") },
             text = {
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .height(400.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp)
+                ) {
                     var mapFile by remember { mutableStateOf<File?>(null) }
                     var isMapPreparing by remember { mutableStateOf(true) }
 
@@ -156,7 +163,7 @@ fun NuevaIncidenciaScreen(
                         } catch (e: Exception) {
                             // Ignorar si ya está inicializado
                         }
-                        
+
                         mapFile = withContext(Dispatchers.IO) {
                             val filename = "Cuba_oam.osm.map"
                             val destFile = File(context.filesDir, filename)
@@ -178,7 +185,10 @@ fun NuevaIncidenciaScreen(
                     }
 
                     if (isMapPreparing) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                             CircularProgressIndicator(color = AzulPrimario)
                         }
                     } else if (mapFile != null) {
@@ -187,7 +197,7 @@ fun NuevaIncidenciaScreen(
                                 MapView(ctx).apply {
                                     isClickable = true
                                     mapScaleBar.isVisible = true
-                                    
+
                                     // Set default position
                                     setCenter(LatLong(23.1492, -81.2494))
                                     setZoomLevel(13.toByte())
@@ -208,14 +218,29 @@ fun NuevaIncidenciaScreen(
                                     )
                                     tileRendererLayer.setXmlRenderTheme(InternalRenderTheme.OSMARENDER)
                                     layerManager.layers.add(tileRendererLayer)
-                                    
+
                                     // Touch listener via Layer
                                     val tapLayer = object : Layer() {
-                                        override fun draw(boundingBox: org.mapsforge.core.model.BoundingBox?, zoomLevel: Byte, canvas: org.mapsforge.core.graphics.Canvas?, topLeftPoint: org.mapsforge.core.model.Point?) {}
-                                        
-                                        override fun onTap(tapLatLong: LatLong?, layerXY: org.mapsforge.core.model.Point?, tapXY: org.mapsforge.core.model.Point?): Boolean {
+                                        override fun draw(
+                                            boundingBox: org.mapsforge.core.model.BoundingBox?,
+                                            zoomLevel: Byte,
+                                            canvas: org.mapsforge.core.graphics.Canvas?,
+                                            topLeftPoint: org.mapsforge.core.model.Point?
+                                        ) {
+                                        }
+
+                                        override fun onTap(
+                                            tapLatLong: LatLong?,
+                                            layerXY: org.mapsforge.core.model.Point?,
+                                            tapXY: org.mapsforge.core.model.Point?
+                                        ): Boolean {
                                             if (tapLatLong != null) {
-                                                onAction(NuevaIncidenciaAction.OnMapLocationSelected(tapLatLong.latitude, tapLatLong.longitude))
+                                                onAction(
+                                                    NuevaIncidenciaAction.OnMapLocationSelected(
+                                                        tapLatLong.latitude,
+                                                        tapLatLong.longitude
+                                                    )
+                                                )
                                                 // Optionally call OnCerrarMapa behavior if needed, currently done in the screen action handler or manual close
                                             }
                                             return true
@@ -230,7 +255,10 @@ fun NuevaIncidenciaScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
                             Text("Error al cargar mapa offline.", color = Color.Red)
                         }
                     }
@@ -263,7 +291,8 @@ fun NuevaIncidenciaScreen(
                         .fillMaxWidth()
                         .padding(16.dp)
                         .verticalScroll(rememberScrollState())
-                ) {                    Text(
+                ) {
+                    Text(
                         text = "Seleccionar fecha y hora",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
@@ -281,9 +310,11 @@ fun NuevaIncidenciaScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val timePickerState = rememberTimePickerState(
-                        initialHour = Calendar.getInstance().apply { timeInMillis = state.fechaHora }
+                        initialHour = Calendar.getInstance()
+                            .apply { timeInMillis = state.fechaHora }
                             .get(Calendar.HOUR_OF_DAY),
-                        initialMinute = Calendar.getInstance().apply { timeInMillis = state.fechaHora }
+                        initialMinute = Calendar.getInstance()
+                            .apply { timeInMillis = state.fechaHora }
                             .get(Calendar.MINUTE)
                     )
                     TimePicker(
@@ -303,8 +334,10 @@ fun NuevaIncidenciaScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         TextButton(
                             onClick = {
-                                val selectedDate = datePickerState.selectedDateMillis ?: state.fechaHora
-                                val calendar = Calendar.getInstance().apply { timeInMillis = selectedDate }
+                                val selectedDate =
+                                    datePickerState.selectedDateMillis ?: state.fechaHora
+                                val calendar =
+                                    Calendar.getInstance().apply { timeInMillis = selectedDate }
                                 calendar.set(Calendar.HOUR_OF_DAY, timePickerState.hour)
                                 calendar.set(Calendar.MINUTE, timePickerState.minute)
                                 calendar.set(Calendar.SECOND, 0)
@@ -593,12 +626,19 @@ fun NuevaIncidenciaScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                pickMultipleMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                pickMultipleMedia.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
                             },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = AzulPrimario)
                         ) {
-                            Icon(imageVector = Icons.Default.PhotoLibrary, contentDescription = null)
+                            Icon(
+                                imageVector = Icons.Default.PhotoLibrary,
+                                contentDescription = null
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Galería")
                         }
@@ -629,11 +669,41 @@ fun NuevaIncidenciaScreen(
                         Button(
                             onClick = {
                                 if (locationPermissionState.status.isGranted) {
-                                    onAction(NuevaIncidenciaAction.OnObtenerCoordenadas)
-                                    // Simulando obtención de GPS
-                                    onAction(NuevaIncidenciaAction.OnCoordenadasObtenidas(23.113592, -82.366592)) // TODO: Hook real FusedLocationProviderClient
-                                } else {
-                                    locationPermissionState.launchPermissionRequest()
+                                    val hasLocationPermission = ContextCompat.checkSelfPermission(
+                                        context,
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                    ) == PackageManager.PERMISSION_GRANTED
+
+                                    if (hasLocationPermission) {
+                                        onAction(NuevaIncidenciaAction.OnObtenerCoordenadas)
+                                        try {
+                                            val cancellationTokenSource = CancellationTokenSource()
+                                            LocationServices.getFusedLocationProviderClient(context)
+                                                .getCurrentLocation(
+                                                    Priority.PRIORITY_HIGH_ACCURACY,
+                                                    cancellationTokenSource.token,
+                                                )
+                                                .addOnSuccessListener { location ->
+                                                    if (location != null) {
+                                                        onAction(
+                                                            NuevaIncidenciaAction.OnCoordenadasObtenidas(
+                                                                location.latitude,
+                                                                location.longitude,
+                                                            ),
+                                                        )
+                                                    } else {
+                                                        onAction(NuevaIncidenciaAction.OnCoordenadasError)
+                                                    }
+                                                }
+                                                .addOnFailureListener {
+                                                    onAction(NuevaIncidenciaAction.OnCoordenadasError)
+                                                }
+                                        } catch (_: SecurityException) {
+                                            onAction(NuevaIncidenciaAction.OnCoordenadasError)
+                                        }
+                                    } else {
+                                        locationPermissionState.launchPermissionRequest()
+                                    }
                                 }
                             },
                             modifier = Modifier.weight(1f),
@@ -681,7 +751,11 @@ fun NuevaIncidenciaScreen(
                                 contentScale = ContentScale.Crop
                             )
                         }
-                    } else if (!state.estadoNombre.equals("Resuelta", ignoreCase = true) && !state.esBorrador) {
+                    } else if (!state.estadoNombre.equals(
+                            "Resuelta",
+                            ignoreCase = true
+                        ) && !state.esBorrador
+                    ) {
                         Button(
                             onClick = {
                                 if (cameraPermissionState.status.isGranted) {
@@ -737,7 +811,7 @@ private fun createTempImageUri(context: Context): Uri {
         "incidencia_img_${System.currentTimeMillis()}", ".jpg",
         imagesDir
     ).apply { createNewFile() }
-    
+
     return FileProvider.getUriForFile(
         context,
         "${context.packageName}.fileprovider",
