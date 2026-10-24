@@ -14,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -329,7 +331,12 @@ private fun PasswordField(
         singleLine = true,
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
         trailingIcon = {
-            TextButton(onClick = { onVisibilityChange(!visible) }) { Text(if (visible) "Ocultar" else "Mostrar") }
+            IconButton(onClick = { onVisibilityChange(!visible) }) {
+                Icon(
+                    imageVector = if (visible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription = if (visible) "Ocultar contraseña" else "Mostrar contraseña",
+                )
+            }
         },
         isError = error != null,
         supportingText = { error?.let { Text(it) } },
