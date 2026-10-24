@@ -1,7 +1,7 @@
 # Comparación de historias de usuario con la APK Android
 
 **Documento de referencia:** `HU APK SMA 13-10.pdf`, versión 1.2, fechada 13/10/2026.  
-**Código revisado:** proyecto Android `MonitoreoAmbiental`, árbol de trabajo al 24/10/2026; HU 15 actualizado tras conectar la ubicación real del dispositivo.  
+**Código revisado:** proyecto Android `MonitoreoAmbiental`, árbol de trabajo al 24/10/2026; HU 12, HU 15 y HU 16 actualizadas tras los cambios Android.
 **Alcance:** experiencia Android, pantallas, navegación, estado local, validaciones y puntos donde la APK depende de servicios externos. No se evalúa la implementación del backend ni se afirma que una llamada remota funcione en producción.
 
 ## Resumen
@@ -37,10 +37,10 @@ Los nombres de archivo bajo «Evidencia» son rutas relativas al proyecto Androi
 | 6 | Cambiar contraseña | No localizada | No hay acceso o pantalla de cambio de contraseña en `ProfileScreen` ni ruta de navegación observada. | Implementar el flujo Android desde perfil, con validación de contraseña actual, política, confirmación y cancelación; el cambio efectivo depende del servicio. |
 | 7 | Gestionar sesiones activas | Parcial | Al detectar múltiples sesiones durante login se muestra resolución de conflicto, permite seleccionar sesiones y solicitar cierre; cancelar limpia la selección. | Solo se cubre al iniciar sesión. No hay gestión desde perfil; presentación de dispositivo/IP/tiempo y fallos individuales dependen de la respuesta remota. |
 | 8 | Consultar estadísticas de incidencias | Parcial | Home incluye estadísticas, distribución por estado, meses, borradores y pendientes, usando incidencias observadas localmente. | No se encontró una UI Android diferenciada que demuestre contadores globales del rol administrador de datos. Confirmar alcance por rol y fuente/consistencia de los conteos. |
-| 9 | Listar incidencias | Cubierta en lo esencial | Home y «Mis Incidencias» muestran tarjetas; hay paginación incremental, estado, grupo por fecha, acceso a detalle y recuperación de borradores. | La lista principal es propia/local-first. El listado global de administrador y mensajes concretos de error/vacío requieren validar la respuesta remota y permisos por rol. |
+| 9 | Listar incidencias | Cubierta en lo esencial | Home y «Mis Incidencias» muestran tarjetas; hay paginación incremental, estado, grupo por fecha, acceso a detalle y recuperación de borradores. Solo los elementos marcados como borrador abren el formulario; pendientes locales abren lectura. | La lista principal es propia/local-first. El listado global de administrador y mensajes concretos de error/vacío requieren validar la respuesta remota y permisos por rol. |
 | 10 | Filtrar incidencias | Parcial | «Mis Incidencias» ofrece filtros de estado, incluidos borrador y pendientes; Home también mantiene filtros y mes/estado. | No se encontró un rango de fechas completo como el descrito en la HU ni equivalencia comprobada de opciones para administrador. |
 | 11 | Buscar incidencias | Parcial | Campo de búsqueda en listado/Home; filtra datos disponibles localmente y puede combinarse con estado. | La historia pide búsqueda sin distinguir acentos; no se observó normalización explícita de diacríticos. Alcance de resultados remotos/globales pendiente de integración. |
-| 12 | Mostrar incidencia | Parcial | Hay detalle de incidencia con datos, evidencia, mapa y selección/edición de campos. | Debe comprobarse en dispositivo la cobertura completa de pantalla completa, carga/error y detalle offline. La información remota y acceso por rol dependen del servidor. |
+| 12 | Mostrar incidencia | Alineada con lectura | Detalle muestra datos remotos/locales, estado, coordenadas y evidencias en miniaturas ampliables. La pantalla no ofrece acciones de edición ni resolución. | Validar carga de URLs de evidencia en dispositivo y el comportamiento sin red; la entrega de URLs y permisos por rol dependen del servicio. |
 | 13 | Crear incidencia | Parcial | Formulario con temática, localidad, descripción, dirección, selector de fecha/hora, evidencia y ubicación; catálogos se mantienen localmente y se pueden sincronizar. | Aunque hay selector de fecha/hora, el guardado construye la incidencia con `System.currentTimeMillis()`, ignorando el valor seleccionado. El GPS real está pendiente (HU 15). |
 | 14 | Adjuntar foto de evidencia | Parcial | Cámara mediante contrato Android y selección múltiple de imágenes; vista previa y acción de eliminar; fotos se copian a almacenamiento interno. | La APK permite hasta 5 imágenes, mientras la HU describe una foto por incidencia. El borrado es directo sin confirmación. No se confirmó validación de formato/tamaño de 5 MB. |
 | 15 | Georreferenciar incidencia | Parcial | Permiso de ubicación, mapa offline Mapsforge con selección de punto y coordenadas visibles; con permiso concedido, el botón solicita la ubicación actual al proveedor fused y guarda latitud/longitud recibidas. | Si el proveedor no devuelve posición o falla, se muestra el error genérico. Queda validar en dispositivo, explicar permisos y cubrir GPS apagado/denegación permanente. |
@@ -141,9 +141,9 @@ No se encontró ruta, pantalla ni acción de cambio de contraseña en el perfil.
 
 ### HU 12 — Mostrar incidencia
 
-**Flujo observado:** navegación abre detalle de incidencia; la pantalla contiene campos, evidencia, mapa y acciones de edición/estado.
+**Flujo observado:** navegación abre un detalle de solo lectura para incidencias enviadas y pendientes locales. Muestra sus datos, estado, coordenadas y las URLs de evidencias recibidas al sincronizar el detalle. Las miniaturas se pueden ampliar. «Ver en el mapa» abre el mapa offline de Mapsforge centrado en las coordenadas de la incidencia, con un marcador en el punto. Los borradores abren el formulario de continuación desde la lista.
 
-**Brecha:** hace falta confirmar en ejecución los estados de detalle no disponible/error, visualización a pantalla completa y el detalle de incidencia local sin conexión. Estado, criticidad y permisos de edición se nutren de API/catálogos.
+**Alineación:** se retiraron los controles de edición, geolocalización modificable y resolución de esta pantalla. La carga de las miniaturas depende de que el detalle remoto devuelva `evidences.file_url`; probar URLs con la configuración real del servicio.
 
 **Evidencia:** [`DetalleIncidenciaScreen.kt`](../app/src/main/java/cu/uci/cisol/monitoreoambiental/ui/incidencia/DetalleIncidenciaScreen.kt), [`DetalleIncidenciaViewModel.kt`](../app/src/main/java/cu/uci/cisol/monitoreoambiental/ui/incidencia/DetalleIncidenciaViewModel.kt), [`MainActivity.kt`](../app/src/main/java/cu/uci/cisol/monitoreoambiental/MainActivity.kt).
 
@@ -173,7 +173,7 @@ No se encontró ruta, pantalla ni acción de cambio de contraseña en el perfil.
 
 ### HU 16 — Guardar incidencia como borrador
 
-**Flujo observado:** guardar borrador persiste en Room y el listado lo abre de nuevo en el formulario. El modelo distingue borrador y sincronización.
+**Flujo observado:** guardar borrador persiste en Room; el listado lo abre en el formulario y las imágenes locales guardadas se muestran en la vista previa. Solo `esBorrador` permite entrar en el formulario de edición. El modelo distingue borrador y sincronización.
 
 **Brecha:** no se localizó el diálogo exigido al salir con cambios sin guardar, con confirmar guardar/descartar/seguir editando y confirmación de borrado. Comprobar que borrador, foto y coordenadas sobreviven al cierre y están aislados por usuario.
 

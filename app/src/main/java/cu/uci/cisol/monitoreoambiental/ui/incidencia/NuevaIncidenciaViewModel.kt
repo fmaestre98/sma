@@ -43,7 +43,6 @@ data class NuevaIncidenciaState(
     val estadoId: String? = null,
     val esBorrador: Boolean = true,
     val estados: List<EstadoIncidencia> = emptyList(),
-    val imagenResolucionUri: Uri? = null,
     val isLoading: Boolean = false,
     val showMapDialog: Boolean = false,
     val error: String? = null,
@@ -72,7 +71,6 @@ sealed interface NuevaIncidenciaAction {
     data class OnFotoTomada(val uri: Uri?) : NuevaIncidenciaAction
     data class OnFotoSeleccionada(val uris: List<Uri>) : NuevaIncidenciaAction
     data class OnFotoEliminada(val uri: Uri) : NuevaIncidenciaAction
-    data class OnFotoResolucionTomada(val uri: Uri?) : NuevaIncidenciaAction
     object OnObtenerCoordenadas : NuevaIncidenciaAction
     data class OnCoordenadasObtenidas(val lat: Double, val lng: Double) : NuevaIncidenciaAction
     object OnCoordenadasError : NuevaIncidenciaAction
@@ -82,7 +80,6 @@ sealed interface NuevaIncidenciaAction {
     object OnLimpiarUbicacion : NuevaIncidenciaAction
     object OnGuardarBorrador : NuevaIncidenciaAction
     object OnEnviarAlServidor : NuevaIncidenciaAction
-    object OnMarcarComoResuelta : NuevaIncidenciaAction
 
     data class OnFechaHoraChange(val fechaHora: Long) : NuevaIncidenciaAction
 }
@@ -158,6 +155,12 @@ class NuevaIncidenciaViewModel(
             _state.update { it.copy(isLoading = true) }
             val incidencia = incidenciaRepository.obtenerPorId(id)
             if (incidencia != null) {
+                if (!incidencia.esBorrador) {
+                    _state.update { it.copy(isLoading = false, error = "Solo se pueden editar borradores") }
+                    _events.send(NuevaIncidenciaEvent.ShowSnackbar("Solo se pueden editar borradores"))
+                    _events.send(NuevaIncidenciaEvent.NavigateBack)
+                    return@launch
+                }
                 _state.update {
                     it.copy(
                         incidenciaId = incidencia.id,
@@ -166,13 +169,11 @@ class NuevaIncidenciaViewModel(
                         descripcion = incidencia.descripcion,
                         direccion = incidencia.address ?: "",
                         imagenesUris = incidencia.imagenesPaths.map { Uri.parse(it) },
-                        imagenResolucionUri =
-                            incidencia.imagenResolucionPath?.let { path -> Uri.parse(path) },
                         latitud = incidencia.latitud,
                         longitud = incidencia.longitud,
                         modo = FormMode.EDITAR,
                         estadoId = incidencia.estadoId,
-                        esBorrador = incidencia.esBorrador || (!incidencia.sincronizado && incidencia.serverId == null),
+                        esBorrador = incidencia.esBorrador,
                         isLoading = false,
                     )
                 }
@@ -220,14 +221,6 @@ class NuevaIncidenciaViewModel(
             }
             is NuevaIncidenciaAction.OnFotoEliminada -> {
                 _state.update { it.copy(imagenesUris = it.imagenesUris - action.uri) }
-            }
-            is NuevaIncidenciaAction.OnFotoResolucionTomada -> {
-                if (action.uri != null) {
-                    viewModelScope.launch {
-                        val savedUri = copyUriToInternalStorage(appContext, action.uri)
-                        _state.update { it.copy(imagenResolucionUri = savedUri) }
-                    }
-                }
             }
             is NuevaIncidenciaAction.OnObtenerCoordenadas -> {
                 _state.update { it.copy(obteniendoCoordenadas = true) }
@@ -282,9 +275,6 @@ class NuevaIncidenciaViewModel(
             }
             is NuevaIncidenciaAction.OnEnviarAlServidor -> {
                 guardar(esBorradorFinal = false)
-            }
-            is NuevaIncidenciaAction.OnMarcarComoResuelta -> {
-                marcarResuelta()
             }
             is NuevaIncidenciaAction.OnFechaHoraChange -> {
                 _state.update { it.copy(fechaHora = action.fechaHora) }
@@ -348,7 +338,7 @@ class NuevaIncidenciaViewModel(
                         descripcion = currentState.descripcion,
                         address = currentState.direccion,
                         imagenesPaths = currentState.imagenesUris.map { it.toString() },
-                        imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
+                        imagenResolucionPath = null,
                         latitud = currentState.latitud,
                         longitud = currentState.longitud,
                         fechaHora = System.currentTimeMillis(),
@@ -393,38 +383,6 @@ class NuevaIncidenciaViewModel(
         }
     }
 
-    private fun marcarResuelta() {
-        val currentState = _state.value
-        val resueltaEstadoId = currentState.estados.firstOrNull { it.isFinal }?.id
-
-        if (resueltaEstadoId == null) {
-            viewModelScope.launch {
-                _events.send(NuevaIncidenciaEvent.ShowSnackbar("No se encontró el estado final"))
-            }
-            return
-        }
-
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            val result =
-                incidenciaRepository.actualizarEstado(
-                    id = currentState.incidenciaId,
-                    estadoId = resueltaEstadoId,
-                    esBorrador = false,
-                    imagenResolucionPath = currentState.imagenResolucionUri?.toString(),
-                )
-
-            if (result.isSuccess) {
-                _state.update {
-                    it.copy(estadoId = resueltaEstadoId, esBorrador = false, isLoading = false)
-                }
-                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Marcada como resuelta"))
-            } else {
-                _state.update { it.copy(isLoading = false) }
-                _events.send(NuevaIncidenciaEvent.ShowSnackbar("Error al marcar como resuelta"))
-            }
-        }
-    }
     private suspend fun copyUriToInternalStorage(context: Context, uri: Uri): Uri = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
         if (uri.scheme == "file") return@withContext uri
         try {

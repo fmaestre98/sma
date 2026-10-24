@@ -132,16 +132,6 @@ fun NuevaIncidenciaScreen(
         }
     }
 
-    var resolutionPhotoUri by remember { mutableStateOf<Uri?>(null) }
-    val takeResolutionPictureLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture(),
-        onResult = { success ->
-            if (success) {
-                onAction(NuevaIncidenciaAction.OnFotoResolucionTomada(resolutionPhotoUri))
-            }
-        }
-    )
-
     val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
     if (state.showMapDialog) {
@@ -361,7 +351,7 @@ fun NuevaIncidenciaScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = if (state.modo == FormMode.CREAR) "Nueva Incidencia" else "Detalle Incidencia",
+                        text = if (state.modo == FormMode.CREAR) "Nueva Incidencia" else "Editar borrador",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -723,54 +713,6 @@ fun NuevaIncidenciaScreen(
                             Icon(imageVector = Icons.Default.Map, contentDescription = null)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Mapa")
-                        }
-                    }
-                }
-
-                // Sección para foto de resolución si estamos en EDITAR
-                if (state.modo == FormMode.EDITAR) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (state.estadoNombre.equals("Resuelta", ignoreCase = true)) {
-                        Text(
-                            text = "Foto de Resolución (Evidencia)",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = ColorResuelta
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        if (state.imagenResolucionUri != null) {
-                            AsyncImage(
-                                model = state.imagenResolucionUri,
-                                contentDescription = "Foto de resolución",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                    } else if (!state.estadoNombre.equals(
-                            "Resuelta",
-                            ignoreCase = true
-                        ) && !state.esBorrador
-                    ) {
-                        Button(
-                            onClick = {
-                                if (cameraPermissionState.status.isGranted) {
-                                    resolutionPhotoUri = createTempImageUri(context)
-                                    takeResolutionPictureLauncher.launch(resolutionPhotoUri!!)
-                                    // MarcarResuelta should happen after we take the photo visually, but for now we do it directly:
-                                    onAction(NuevaIncidenciaAction.OnMarcarComoResuelta)
-                                } else {
-                                    cameraPermissionState.launchPermissionRequest()
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = ColorAceptada)
-                        ) {
-                            Text("Añadir foto y Marcar como Resuelta")
                         }
                     }
                 }
