@@ -22,11 +22,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cu.uci.cisol.monitoreoambiental.R
+import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     viewModel: AuthViewModel,
@@ -37,6 +41,13 @@ fun RegisterScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var passwordVisible by remember { mutableStateOf(false) }
+    var confirmationVisible by remember { mutableStateOf(false) }
+    var countryMenuExpanded by remember { mutableStateOf(false) }
+    val countries = remember {
+        Locale.getISOCountries().map { code ->
+            code to Locale("", code).getDisplayCountry(Locale("es"))
+        }.sortedBy { it.second }
+    }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
@@ -97,71 +108,124 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = state.firstName,
-                onValueChange = { viewModel.onAction(AuthAction.OnFirstNameChange(it)) },
-                placeholder = { Text("Nombre") },
-                modifier = Modifier.weight(1f).padding(end = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
-                isError = state.error != null
-            )
-
-            OutlinedTextField(
-                value = state.lastName,
-                onValueChange = { viewModel.onAction(AuthAction.OnLastNameChange(it)) },
-                placeholder = { Text("Apellidos") },
-                modifier = Modifier.weight(1f).padding(start = 8.dp),
-                shape = RoundedCornerShape(8.dp),
-                singleLine = true,
-                isError = state.error != null
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = state.email,
-            onValueChange = { viewModel.onAction(AuthAction.OnEmailChange(it)) },
-            placeholder = { Text("Correo Electrónico") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            singleLine = true,
-            isError = state.error != null
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         OutlinedTextField(
             value = state.username,
             onValueChange = { viewModel.onAction(AuthAction.OnUsernameChange(it)) },
-            placeholder = { Text("Nombre de Usuario") },
+            label = { Text("Nombre de usuario *") },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            singleLine = true,
-            isError = state.error != null
+            shape = RoundedCornerShape(8.dp), singleLine = true,
+            isError = "username" in state.registrationFieldErrors,
         )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = state.firstName,
+            onValueChange = { viewModel.onAction(AuthAction.OnFirstNameChange(it)) },
+            label = { Text("Nombre") }, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp), singleLine = true,
+            isError = "firstName" in state.registrationFieldErrors,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = state.lastName,
+            onValueChange = { viewModel.onAction(AuthAction.OnLastNameChange(it)) },
+            label = { Text("Apellidos") }, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp), singleLine = true,
+            isError = "lastName" in state.registrationFieldErrors,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = state.email,
+            onValueChange = { viewModel.onAction(AuthAction.OnEmailChange(it)) },
+            label = { Text("Correo electrónico *") }, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp), singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+            isError = "email" in state.registrationFieldErrors,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Box {
+            OutlinedTextField(
+                value = countries.firstOrNull { it.first == state.countryCode }?.second.orEmpty(),
+                onValueChange = {}, readOnly = true,
+                label = { Text("País *") }, modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp), singleLine = true,
+                isError = "country" in state.registrationFieldErrors,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = countryMenuExpanded) },
+            )
+            Box(Modifier.matchParentSize().clickable { countryMenuExpanded = true })
+            DropdownMenu(
+                expanded = countryMenuExpanded,
+                onDismissRequest = { countryMenuExpanded = false },
+                modifier = Modifier.heightIn(max = 320.dp),
+            ) {
+                countries.forEach { (code, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = {
+                            viewModel.onAction(AuthAction.OnCountryChange(code))
+                            countryMenuExpanded = false
+                        },
+                    )
+                }
+            }
+        }
+        if (state.countryCode == "CU") {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.ci,
+                onValueChange = { viewModel.onAction(AuthAction.OnCiChange(it)) },
+                label = { Text("CI (11 dígitos) *") }, modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp), singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = "ci" in state.registrationFieldErrors,
+            )
+        } else if (state.countryCode.isNotBlank()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.passport,
+                onValueChange = { viewModel.onAction(AuthAction.OnPassportChange(it)) },
+                label = { Text("Pasaporte (máximo 9 caracteres) *") }, modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp), singleLine = true,
+                isError = "passport" in state.registrationFieldErrors,
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = state.phone,
+            onValueChange = { viewModel.onAction(AuthAction.OnPhoneChange(it)) },
+            label = { Text("Teléfono") }, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp), singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            isError = "phone" in state.registrationFieldErrors,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
         OutlinedTextField(
             value = state.password,
             onValueChange = { viewModel.onAction(AuthAction.OnPasswordChange(it)) },
-            placeholder = { Text("Contraseña") },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            singleLine = true,
+            label = { Text("Contraseña *") }, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp), singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
             trailingIcon = {
                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(
-                        imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña"
-                    )
+                    Icon(if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (passwordVisible) "Ocultar contraseña" else "Mostrar contraseña")
                 }
             },
-            isError = state.error != null
+            isError = "password" in state.registrationFieldErrors,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedTextField(
+            value = state.passwordConfirmation,
+            onValueChange = { viewModel.onAction(AuthAction.OnPasswordConfirmationChange(it)) },
+            label = { Text("Confirmar contraseña *") }, modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp), singleLine = true,
+            visualTransformation = if (confirmationVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { confirmationVisible = !confirmationVisible }) {
+                    Icon(if (confirmationVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (confirmationVisible) "Ocultar contraseña" else "Mostrar contraseña")
+                }
+            },
+            isError = "passwordConfirmation" in state.registrationFieldErrors,
         )
 
         if (state.error != null && !state.showOtpVerification) {

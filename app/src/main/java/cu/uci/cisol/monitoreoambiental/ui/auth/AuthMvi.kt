@@ -14,6 +14,12 @@ data class AuthState(
     val firstName: String = "",
     val lastName: String = "",
     val username: String = "",
+    val countryCode: String = "CU",
+    val ci: String = "",
+    val passport: String = "",
+    val phone: String = "",
+    val passwordConfirmation: String = "",
+    val registrationFieldErrors: Set<String> = emptySet(),
 
     // OTP verification
     val showOtpVerification: Boolean = false,
@@ -46,6 +52,11 @@ sealed interface AuthAction {
     data class OnFirstNameChange(val name: String) : AuthAction
     data class OnLastNameChange(val name: String) : AuthAction
     data class OnUsernameChange(val username: String) : AuthAction
+    data class OnCountryChange(val countryCode: String) : AuthAction
+    data class OnCiChange(val ci: String) : AuthAction
+    data class OnPassportChange(val passport: String) : AuthAction
+    data class OnPhoneChange(val phone: String) : AuthAction
+    data class OnPasswordConfirmationChange(val password: String) : AuthAction
 
     object SubmitLogin : AuthAction
     object SubmitRegister : AuthAction

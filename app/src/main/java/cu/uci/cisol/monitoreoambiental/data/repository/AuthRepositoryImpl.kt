@@ -83,12 +83,16 @@ class AuthRepositoryImpl(
 
     override suspend fun register(request: RegistrationRequest): EmptyResult<AuthError> {
         val dto = RegisterRequestDto(
-            email = request.correo ?: "",
+            email = request.correo,
             userName = request.nombreUsuario,
-            firstName = request.nombreCompleto?.split(" ")?.firstOrNull() ?: "",
-            lastName = request.nombreCompleto?.split(" ")?.drop(1)?.joinToString(" ") ?: "",
+            firstName = request.nombre,
+            lastName = request.apellidos,
+            phone = request.telefono,
+            country = request.pais,
+            ci = request.ci,
+            passport = request.pasaporte,
             password = request.contrasena,
-            password2 = request.contrasena,
+            password2 = request.confirmacionContrasena,
         )
 
         return try {

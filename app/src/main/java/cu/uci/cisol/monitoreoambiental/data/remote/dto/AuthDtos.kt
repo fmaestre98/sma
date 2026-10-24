@@ -50,6 +50,9 @@ data class RegisterRequestDto(
     @SerialName("first_name") val firstName: String,
     @SerialName("last_name") val lastName: String,
     val phone: String? = null,
+    val country: String,
+    val ci: String? = null,
+    val passport: String? = null,
     val password: String,
     val password2: String,
 )

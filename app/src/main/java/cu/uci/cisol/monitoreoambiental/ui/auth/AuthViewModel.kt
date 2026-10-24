@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import android.util.Patterns
 
 class AuthViewModel(
     private val authRepository: AuthRepository,
@@ -59,11 +60,16 @@ class AuthViewModel(
 
     fun onAction(action: AuthAction) {
         when (action) {
-            is AuthAction.OnEmailChange -> _state.update { it.copy(email = action.email, error = null) }
-            is AuthAction.OnPasswordChange -> _state.update { it.copy(password = action.password, error = null) }
-            is AuthAction.OnFirstNameChange -> _state.update { it.copy(firstName = action.name, error = null) }
-            is AuthAction.OnLastNameChange -> _state.update { it.copy(lastName = action.name, error = null) }
-            is AuthAction.OnUsernameChange -> _state.update { it.copy(username = action.username, error = null) }
+            is AuthAction.OnEmailChange -> _state.update { it.copy(email = action.email, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnPasswordChange -> _state.update { it.copy(password = action.password, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnFirstNameChange -> _state.update { it.copy(firstName = action.name, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnLastNameChange -> _state.update { it.copy(lastName = action.name, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnUsernameChange -> _state.update { it.copy(username = action.username, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnCountryChange -> _state.update { it.copy(countryCode = action.countryCode, ci = "", passport = "", error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnCiChange -> _state.update { it.copy(ci = action.ci.filter { char -> char.isDigit() }, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnPassportChange -> _state.update { it.copy(passport = action.passport, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnPhoneChange -> _state.update { it.copy(phone = action.phone, error = null, registrationFieldErrors = emptySet()) }
+            is AuthAction.OnPasswordConfirmationChange -> _state.update { it.copy(passwordConfirmation = action.password, error = null, registrationFieldErrors = emptySet()) }
             AuthAction.SubmitLogin -> {
                 val currentState = _state.value
                 if (currentState.email.isBlank() || currentState.password.isBlank()) {
@@ -75,8 +81,11 @@ class AuthViewModel(
             AuthAction.SubmitRegister -> {
                 if (!_state.value.allowRegistration) return
                 val currentState = _state.value
-                if (currentState.email.isBlank() || currentState.password.isBlank() || currentState.firstName.isBlank() || currentState.lastName.isBlank() || currentState.username.isBlank()) {
-                    _state.update { it.copy(error = UiText.DynamicString("Por favor llene todos los campos")) }
+                val (validationMessage, fieldErrors) = validateRegistration(currentState)
+                if (validationMessage != null) {
+                    _state.update {
+                        it.copy(error = UiText.DynamicString(validationMessage), registrationFieldErrors = fieldErrors)
+                    }
                 } else {
                     register(currentState)
                 }
@@ -188,10 +197,16 @@ class AuthViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             val request = RegistrationRequest(
-                nombreUsuario = currentState.username,
+                nombreUsuario = currentState.username.trim(),
                 contrasena = currentState.password,
-                nombreCompleto = "${currentState.firstName} ${currentState.lastName}".trim(),
-                correo = currentState.email
+                confirmacionContrasena = currentState.passwordConfirmation,
+                nombre = currentState.firstName.trim(),
+                apellidos = currentState.lastName.trim(),
+                correo = currentState.email.trim(),
+                pais = currentState.countryCode,
+                ci = currentState.ci.takeIf { currentState.countryCode == "CU" },
+                pasaporte = currentState.passport.takeIf { currentState.countryCode != "CU" },
+                telefono = currentState.phone.takeIf { it.isNotBlank() },
             )
 
             val result = authRepository.register(request)
@@ -218,6 +233,62 @@ class AuthViewModel(
                 }
             }
         }
+    }
+
+    private fun validateRegistration(state: AuthState): Pair<String?, Set<String>> {
+        val errors = linkedSetOf<String>()
+        var message: String? = null
+        fun fail(field: String, text: String) {
+            errors += field
+            if (message == null) message = text
+        }
+        fun required(field: String, value: String) {
+            if (value.isBlank()) fail(field, "Complete los campos obligatorios marcados con *.")
+        }
+
+        required("username", state.username)
+        if (state.username.isNotBlank() && state.username.trim().length !in 8..15) {
+            fail("username", "El nombre de usuario debe tener entre 8 y 15 caracteres.")
+        }
+        if (state.firstName.isNotBlank() && !state.firstName.matches(Regex("[\\p{L} ]+"))) {
+            fail("firstName", "El nombre solo admite letras y espacios.")
+        }
+        if (state.lastName.isNotBlank() && !state.lastName.matches(Regex("[\\p{L} ]+"))) {
+            fail("lastName", "Los apellidos solo admiten letras y espacios.")
+        }
+        required("email", state.email)
+        if (state.email.isNotBlank() && (state.email.length > 255 || !Patterns.EMAIL_ADDRESS.matcher(state.email.trim()).matches())) {
+            fail("email", "El correo electrónico no tiene un formato válido.")
+        }
+        required("country", state.countryCode)
+        if (state.countryCode == "CU") {
+            required("ci", state.ci)
+            if (state.ci.isNotBlank() && (state.ci.length != 11 || !state.ci.all { it.isDigit() })) {
+                fail("ci", "El CI debe tener 11 dígitos.")
+            }
+        } else if (state.countryCode.isNotBlank()) {
+            required("passport", state.passport)
+            if (state.passport.length > 9) fail("passport", "El pasaporte admite un máximo de 9 caracteres.")
+        }
+        if (state.phone.isNotBlank() && (state.phone.length > 15 || !state.phone.all { it.isDigit() })) {
+            fail("phone", "El teléfono solo admite dígitos y hasta 15 caracteres.")
+        }
+        required("password", state.password)
+        if (state.password.isNotBlank() && (
+                state.password.length < 12 ||
+                    !state.password.any { it.isUpperCase() } ||
+                    !state.password.any { it.isLowerCase() } ||
+                    !state.password.any { it.isDigit() } ||
+                    !state.password.any { !it.isLetterOrDigit() }
+            )
+        ) {
+            fail("password", "La contraseña requiere mínimo 12 caracteres, mayúsculas, minúsculas, números y caracteres especiales.")
+        }
+        required("passwordConfirmation", state.passwordConfirmation)
+        if (state.passwordConfirmation.isNotBlank() && state.password != state.passwordConfirmation) {
+            fail("passwordConfirmation", "Las contraseñas no coinciden.")
+        }
+        return message to errors
     }
 
     private fun verifyOtp() {
